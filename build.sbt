@@ -26,5 +26,22 @@ lazy val core = project.in(file("core"))
     name := "dwolla-otel-natchez",
     description := "Utilities for configuring a Natchez EntryPoint for OpenTelemetry at Dwolla",
     libraryDependencies ++= Seq(
+      "org.tpolecat" %% "natchez-core" % "0.2.2",
+      "org.tpolecat" %% "natchez-opentelemetry" % "0.2.2",
+      "org.typelevel" %% "cats-core" % "2.9.0",
+      "org.typelevel" %% "cats-effect" % "3.4.3",
+      "org.typelevel" %% "cats-effect-kernel" % "3.4.3",
+      "org.typelevel" %% "cats-effect-std" % "3.4.3",
+      "io.opentelemetry" % "opentelemetry-api" % "1.21.0",
+      "io.opentelemetry" % "opentelemetry-context" % "1.21.0",
+      "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.21.0",
+      "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % "1.21.0",
+      "io.opentelemetry" % "opentelemetry-sdk" % "1.20.1",
+      "io.opentelemetry" % "opentelemetry-sdk-common" % "1.21.0",
+      "io.opentelemetry" % "opentelemetry-sdk-trace" % "1.21.0",
+      "io.opentelemetry" % "opentelemetry-semconv" % "1.21.0-alpha",
+      "io.opentelemetry.contrib" % "opentelemetry-aws-resources" % "1.20.1-alpha",
+      "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % "1.20.1-alpha",
+      "io.opentelemetry.contrib" % "opentelemetry-aws-xray" % "1.20.1",
     )
   )
