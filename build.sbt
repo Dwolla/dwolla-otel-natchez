@@ -26,8 +26,8 @@ lazy val core = project.in(file("core"))
     name := "dwolla-otel-natchez",
     description := "Utilities for configuring a Natchez EntryPoint for OpenTelemetry at Dwolla",
     libraryDependencies ++= Seq(
-      "org.tpolecat" %% "natchez-core" % "0.2.2",
-      "org.tpolecat" %% "natchez-opentelemetry" % "0.2.2",
+      "org.tpolecat" %% "natchez-core" % "0.3.0",
+      "org.tpolecat" %% "natchez-opentelemetry" % "0.3.0",
       "org.typelevel" %% "cats-core" % "2.9.0",
       "org.typelevel" %% "cats-effect" % "3.4.4",
       "org.typelevel" %% "cats-effect-kernel" % "3.4.4",
