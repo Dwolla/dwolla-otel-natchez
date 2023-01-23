@@ -32,6 +32,7 @@ lazy val core = project.in(file("core"))
       "org.typelevel" %% "cats-effect" % "3.4.5",
       "org.typelevel" %% "cats-effect-kernel" % "3.4.5",
       "org.typelevel" %% "cats-effect-std" % "3.4.5",
+      "org.typelevel" %% "cats-mtl" % "1.3.0",
       "io.opentelemetry" % "opentelemetry-api" % "1.22.0",
       "io.opentelemetry" % "opentelemetry-context" % "1.22.0",
       "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.22.0",
