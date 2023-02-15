@@ -18,6 +18,10 @@ ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17"))
 ThisBuild / githubWorkflowScalaVersions := Seq("2.13", "2.12")
 ThisBuild / tlJdkRelease := Some(8)
 ThisBuild / tlCiReleaseBranches := Seq("main")
+ThisBuild / mergifyStewardConfig ~= { _.map(_.copy(
+  author = "dwolla-oss-scala-steward[bot]",
+  mergeMinors = true,
+))}
 
 lazy val root = tlCrossRootProject.aggregate(core)
 
