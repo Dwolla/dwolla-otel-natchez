@@ -44,7 +44,7 @@ lazy val core = project.in(file("core"))
       "io.opentelemetry" % "opentelemetry-sdk" % "1.24.0",
       "io.opentelemetry" % "opentelemetry-sdk-common" % "1.24.0",
       "io.opentelemetry" % "opentelemetry-sdk-trace" % "1.24.0",
-      "io.opentelemetry" % "opentelemetry-semconv" % "1.21.0-alpha",
+      "io.opentelemetry" % "opentelemetry-semconv" % "1.24.0-alpha",
       "io.opentelemetry.contrib" % "opentelemetry-aws-resources" % "1.22.0-alpha",
       "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % "1.22.0-alpha",
       "io.opentelemetry.contrib" % "opentelemetry-aws-xray" % "1.23.0",
