@@ -11,7 +11,7 @@ ThisBuild / developers := List(
 
 ThisBuild / tlSonatypeUseLegacyHost := true
 
-val Scala213 = "2.13.10"
+val Scala213 = "2.13.11"
 ThisBuild / crossScalaVersions := Seq(Scala213, "2.12.17")
 ThisBuild / scalaVersion := Scala213 // the default Scala
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17"))
@@ -30,8 +30,8 @@ lazy val core = project.in(file("core"))
     name := "dwolla-otel-natchez",
     description := "Utilities for configuring a Natchez EntryPoint for OpenTelemetry at Dwolla",
     libraryDependencies ++= Seq(
-      "org.tpolecat" %% "natchez-core" % "0.3.1",
-      "org.tpolecat" %% "natchez-opentelemetry" % "0.3.1",
+      "org.tpolecat" %% "natchez-core" % "0.3.2",
+      "org.tpolecat" %% "natchez-opentelemetry" % "0.3.2",
       "org.typelevel" %% "cats-core" % "2.9.0",
       "org.typelevel" %% "cats-effect" % "3.5.0",
       "org.typelevel" %% "cats-effect-kernel" % "3.5.0",
