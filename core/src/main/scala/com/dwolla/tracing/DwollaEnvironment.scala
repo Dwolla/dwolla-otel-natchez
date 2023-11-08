@@ -1,5 +1,7 @@
 package com.dwolla.tracing
 
+import natchez.TraceableValue
+
 sealed abstract class DwollaEnvironment(val name: String) {
   def normalizedName: String = name.toLowerCase
 }
@@ -21,4 +23,7 @@ object DwollaEnvironment {
     case "prod" | "production" => Prod
     case "sandbox" => Sandbox
   }
+
+  implicit val DwollaEnvironmentTraceableValue: TraceableValue[DwollaEnvironment] =
+    TraceableValue[String].contramap(_.name)
 }
