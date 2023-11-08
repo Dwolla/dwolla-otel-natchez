@@ -15,7 +15,7 @@ import io.opentelemetry.extension.trace.propagation.B3Propagator
 import io.opentelemetry.sdk.resources.{Resource => OTResource}
 import io.opentelemetry.sdk.trace.SdkTracerProvider
 import io.opentelemetry.sdk.trace.`export`.BatchSpanProcessor
-import io.opentelemetry.semconv.resource.attributes.ResourceAttributes
+import io.opentelemetry.semconv.ResourceAttributes
 import natchez._
 import natchez.opentelemetry.OpenTelemetry
 
