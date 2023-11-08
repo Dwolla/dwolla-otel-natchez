@@ -11,13 +11,14 @@ ThisBuild / developers := List(
 
 ThisBuild / tlSonatypeUseLegacyHost := true
 
-val Scala213 = "2.13.12"
-ThisBuild / crossScalaVersions := Seq(Scala213, "2.12.18")
-ThisBuild / scalaVersion := Scala213 // the default Scala
+val Scala3 = "3.3.1"
+ThisBuild / crossScalaVersions := Seq(Scala3, "2.13.12", "2.12.18")
+ThisBuild / scalaVersion := Scala3 // the default Scala
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17"))
-ThisBuild / githubWorkflowScalaVersions := Seq("2.13", "2.12")
+ThisBuild / githubWorkflowScalaVersions := Seq("3", "2.13", "2.12")
 ThisBuild / tlJdkRelease := Some(8)
 ThisBuild / tlCiReleaseBranches := Seq("main")
+ThisBuild / tlVersionIntroduced := Map("3" -> "0.2.2")
 ThisBuild / mergifyStewardConfig ~= { _.map(_.copy(
   author = "dwolla-oss-scala-steward[bot]",
   mergeMinors = true,

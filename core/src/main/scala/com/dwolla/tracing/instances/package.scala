@@ -1,8 +1,8 @@
 package com.dwolla.tracing
 
-import cats._
-import cats.effect.{Trace => _, _}
-import cats.mtl._
+import cats.*
+import cats.effect.{Trace as _, *}
+import cats.mtl.*
 
 package object instances extends LocalInstances
 

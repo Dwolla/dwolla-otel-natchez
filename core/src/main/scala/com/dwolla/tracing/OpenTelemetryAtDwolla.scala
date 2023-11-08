@@ -1,9 +1,9 @@
 package com.dwolla.tracing
 
 import cats.effect.std.Env
-import cats.effect.syntax.all._
-import cats.effect.{Trace => _, _}
-import cats.syntax.all._
+import cats.effect.syntax.all.*
+import cats.effect.{Trace as _, *}
+import cats.syntax.all.*
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
 import io.opentelemetry.context.propagation.{ContextPropagators, TextMapPropagator}
@@ -12,11 +12,11 @@ import io.opentelemetry.contrib.awsxray.AwsXrayIdGenerator
 import io.opentelemetry.contrib.awsxray.propagator.AwsXrayPropagator
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter
 import io.opentelemetry.extension.trace.propagation.B3Propagator
-import io.opentelemetry.sdk.resources.{Resource => OTResource}
+import io.opentelemetry.sdk.resources.Resource as OTResource
 import io.opentelemetry.sdk.trace.SdkTracerProvider
 import io.opentelemetry.sdk.trace.`export`.BatchSpanProcessor
 import io.opentelemetry.semconv.ResourceAttributes
-import natchez._
+import natchez.*
 import natchez.opentelemetry.OpenTelemetry
 
 object OpenTelemetryAtDwolla {
