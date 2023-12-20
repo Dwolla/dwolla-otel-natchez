@@ -41,6 +41,7 @@ lazy val core = project.in(file("core"))
       "io.opentelemetry" % "opentelemetry-api" % "1.33.0",
       "io.opentelemetry" % "opentelemetry-context" % "1.33.0",
       "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.33.0",
+      "io.opentelemetry" % "opentelemetry-exporter-logging-otlp" % "1.33.0",
       "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % "1.33.0",
       "io.opentelemetry" % "opentelemetry-sdk" % "1.33.0",
       "io.opentelemetry" % "opentelemetry-sdk-common" % "1.33.0",
