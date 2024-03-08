@@ -1,5 +1,5 @@
 // https://typelevel.org/sbt-typelevel/faq.html#what-is-a-base-version-anyway
-ThisBuild / tlBaseVersion := "0.2"
+ThisBuild / tlBaseVersion := "0.3"
 
 ThisBuild / organization := "com.dwolla"
 ThisBuild / organizationName := "Dwolla"
@@ -24,7 +24,10 @@ ThisBuild / mergifyStewardConfig ~= { _.map(_.copy(
   mergeMinors = true,
 ))}
 
-lazy val root = tlCrossRootProject.aggregate(core)
+lazy val root = tlCrossRootProject.aggregate(
+  core,
+  `aws-xray-id-generator`,
+)
 
 lazy val core = project.in(file("core"))
   .settings(
@@ -51,6 +54,18 @@ lazy val core = project.in(file("core"))
       "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.23.1-alpha",
       "io.opentelemetry.contrib" % "opentelemetry-aws-resources" % "1.32.0-alpha",
       "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % "1.32.0-alpha",
-      "io.opentelemetry.contrib" % "opentelemetry-aws-xray" % "1.32.0",
+    )
+  )
+  .dependsOn(`aws-xray-id-generator`)
+
+lazy val `aws-xray-id-generator` = project
+  .in(file("aws-xray-id-generator"))
+  .settings(
+    name := "otel-aws-xray-id-generator",
+    description := "Generate OTel trace IDs compatible with AWS X-Ray with minimal dependencies",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-effect" % "3.5.2",
+      "io.opentelemetry" % "opentelemetry-api" % "1.33.0",
+      "io.opentelemetry" % "opentelemetry-sdk-trace" % "1.33.0",
     )
   )
