@@ -7,8 +7,6 @@ import cats.syntax.all.*
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
 import io.opentelemetry.context.propagation.{ContextPropagators, TextMapPropagator}
-import io.opentelemetry.contrib.aws.resource.{Ec2Resource, EcsResource}
-import io.opentelemetry.contrib.awsxray.AwsXrayIdGenerator
 import io.opentelemetry.contrib.awsxray.propagator.AwsXrayPropagator
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter
 import io.opentelemetry.extension.trace.propagation.B3Propagator
@@ -21,30 +19,31 @@ import natchez.opentelemetry.OpenTelemetry
 import org.typelevel.log4cats.LoggerFactory
 
 object OpenTelemetryAtDwolla {
-  def apply[F[_] : Sync : Env](serviceName: String,
-                               env: DwollaEnvironment): Resource[F, EntryPoint[F]] =
-    buildOtel(serviceName, env, None)
-
-  def apply[F[_] : Async : Env : LoggerFactory](serviceName: String,
-                                                env: DwollaEnvironment,
-                                                logTraces: Boolean): Resource[F, EntryPoint[F]] =
+  def apply[F[_] : Async : Env : LoggerFactory : Random](serviceName: String,
+                                                         env: DwollaEnvironment,
+                                                         logTraces: Boolean,
+                                                         dispatcher: Dispatcher[F]): Resource[F, EntryPoint[F]] =
     logTraces
       .guard[Option]
       .traverse { _ =>
         LoggerFactory[F]
           .create
           .toResource
-          .flatMap { implicit logger =>
-            Dispatcher.sequential(true)
-              .map(new LoggingSpanExporter(_))
-              .map(SimpleSpanProcessor.create)
+          .map { implicit logger =>
+            SimpleSpanProcessor.create(new LoggingSpanExporter(dispatcher))
           }
       }
-      .flatMap(buildOtel(serviceName, env, _))
+      .flatMap(buildOtel(serviceName, env, _, AwsXrayIdGenerator(dispatcher)))
+
+  def apply[F[_] : Async : Env : LoggerFactory : Random](serviceName: String,
+                                                         env: DwollaEnvironment,
+                                                         logTraces: Boolean): Resource[F, EntryPoint[F]] =
+    Dispatcher.sequential(true).flatMap(OpenTelemetryAtDwolla(serviceName, env, logTraces, _))
 
   private def buildOtel[F[_] : Sync : Env](serviceName: String,
                                            env: DwollaEnvironment,
                                            loggingProcessor: Option[SpanProcessor],
+                                           awsXrayIdGenerator: AwsXrayIdGenerator[F],
                                           ): Resource[F, EntryPoint[F]] =
     OpenTelemetry.entryPoint(globallyRegister = true) { sdkBuilder =>
       // TODO consider whether to use the OpenTelemetry SDK Autoconfigure module to support all the environment variables https://github.com/open-telemetry/opentelemetry-java/tree/main/sdk-extensions/autoconfigure
@@ -83,10 +82,8 @@ object OpenTelemetryAtDwolla {
                             ResourceAttributes.SERVICE_NAME, serviceName,
                             ResourceAttributes.DEPLOYMENT_ENVIRONMENT, env.name,
                           )))
-                          .merge(Ec2Resource.get())
-                          .merge(EcsResource.get())
                       }
-                      .setIdGenerator(AwsXrayIdGenerator.getInstance())
+                      .setIdGenerator(awsXrayIdGenerator)
                   }(_ addSpanProcessor _)
                   .build()
               }
