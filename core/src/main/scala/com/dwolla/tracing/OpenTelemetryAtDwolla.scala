@@ -7,7 +7,6 @@ import cats.syntax.all.*
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
 import io.opentelemetry.context.propagation.{ContextPropagators, TextMapPropagator}
-import io.opentelemetry.contrib.aws.resource.{Ec2Resource, EcsResource}
 import io.opentelemetry.contrib.awsxray.propagator.AwsXrayPropagator
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter
 import io.opentelemetry.extension.trace.propagation.B3Propagator
@@ -83,8 +82,6 @@ object OpenTelemetryAtDwolla {
                             ResourceAttributes.SERVICE_NAME, serviceName,
                             ResourceAttributes.DEPLOYMENT_ENVIRONMENT, env.name,
                           )))
-                          .merge(Ec2Resource.get())
-                          .merge(EcsResource.get())
                       }
                       .setIdGenerator(awsXrayIdGenerator)
                   }(_ addSpanProcessor _)
