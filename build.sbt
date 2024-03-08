@@ -1,4 +1,3 @@
-// https://typelevel.org/sbt-typelevel/faq.html#what-is-a-base-version-anyway
 ThisBuild / tlBaseVersion := "0.3"
 
 ThisBuild / organization := "com.dwolla"
@@ -29,6 +28,10 @@ lazy val root = tlCrossRootProject.aggregate(
   `aws-xray-id-generator`,
 )
 
+lazy val catsEffectV = "3.5.4"
+lazy val otelApiV = "1.36.0"
+lazy val otelTraceSdkV = "1.36.0"
+
 lazy val core = project.in(file("core"))
   .settings(
     name := "dwolla-otel-natchez",
@@ -37,20 +40,18 @@ lazy val core = project.in(file("core"))
       "org.tpolecat" %% "natchez-core" % "0.3.5",
       "org.tpolecat" %% "natchez-opentelemetry" % "0.3.5",
       "org.typelevel" %% "cats-core" % "2.10.0",
-      "org.typelevel" %% "cats-effect" % "3.5.4",
-      "org.typelevel" %% "cats-effect-kernel" % "3.5.4",
-      "org.typelevel" %% "cats-effect-std" % "3.5.4",
+      "org.typelevel" %% "cats-effect" % catsEffectV,
       "org.typelevel" %% "cats-mtl" % "1.4.0",
       "org.typelevel" %% "log4cats-core" % "2.6.0",
       "io.circe" %% "circe-literal" % "0.14.6",
       "org.typelevel" %% "jawn-parser" % "1.5.1" % Provided,
-      "io.opentelemetry" % "opentelemetry-api" % "1.36.0",
+      "io.opentelemetry" % "opentelemetry-api" % otelApiV,
       "io.opentelemetry" % "opentelemetry-context" % "1.36.0",
       "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.36.0",
       "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % "1.36.0",
       "io.opentelemetry" % "opentelemetry-sdk" % "1.36.0",
       "io.opentelemetry" % "opentelemetry-sdk-common" % "1.36.0",
-      "io.opentelemetry" % "opentelemetry-sdk-trace" % "1.36.0",
+      "io.opentelemetry" % "opentelemetry-sdk-trace" % otelTraceSdkV,
       "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.23.1-alpha",
       "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % "1.32.0-alpha",
     )
@@ -63,8 +64,8 @@ lazy val `aws-xray-id-generator` = project
     name := "otel-aws-xray-id-generator",
     description := "Generate OTel trace IDs compatible with AWS X-Ray with minimal dependencies",
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-effect" % "3.5.2",
-      "io.opentelemetry" % "opentelemetry-api" % "1.33.0",
-      "io.opentelemetry" % "opentelemetry-sdk-trace" % "1.33.0",
+      "org.typelevel" %% "cats-effect" % catsEffectV,
+      "io.opentelemetry" % "opentelemetry-api" % otelApiV,
+      "io.opentelemetry" % "opentelemetry-sdk-trace" % otelTraceSdkV,
     )
   )
