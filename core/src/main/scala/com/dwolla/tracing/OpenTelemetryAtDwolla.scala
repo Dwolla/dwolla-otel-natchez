@@ -20,6 +20,10 @@ import org.typelevel.log4cats.LoggerFactory
 
 object OpenTelemetryAtDwolla {
   def apply[F[_] : Async : Env : LoggerFactory : Random](serviceName: String,
+                                                         env: DwollaEnvironment): Resource[F, EntryPoint[F]] =
+    apply(serviceName, env, logTraces = false)
+
+  def apply[F[_] : Async : Env : LoggerFactory : Random](serviceName: String,
                                                          env: DwollaEnvironment,
                                                          logTraces: Boolean,
                                                          dispatcher: Dispatcher[F]): Resource[F, EntryPoint[F]] =
