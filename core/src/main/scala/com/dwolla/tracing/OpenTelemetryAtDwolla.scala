@@ -42,7 +42,8 @@ object OpenTelemetryAtDwolla {
   def apply[F[_] : Async : Env : LoggerFactory : Random](serviceName: String,
                                                          env: DwollaEnvironment,
                                                          logTraces: Boolean): Resource[F, EntryPoint[F]] =
-    Dispatcher.sequential(true).flatMap(OpenTelemetryAtDwolla(serviceName, env, logTraces, _))
+    Dispatcher.parallel(await = true)
+      .flatMap(OpenTelemetryAtDwolla(serviceName, env, logTraces, _))
 
   private def buildOtel[F[_] : Sync : Env](serviceName: String,
                                            env: DwollaEnvironment,
