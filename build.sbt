@@ -39,7 +39,7 @@ lazy val core = project.in(file("core"))
     libraryDependencies ++= Seq(
       "org.tpolecat" %% "natchez-core" % "0.3.5",
       "org.tpolecat" %% "natchez-opentelemetry" % "0.3.5",
-      "org.typelevel" %% "cats-core" % "2.10.0",
+      "org.typelevel" %% "cats-core" % "2.11.0",
       "org.typelevel" %% "cats-effect" % catsEffectV,
       "org.typelevel" %% "cats-mtl" % "1.4.0",
       "org.typelevel" %% "log4cats-core" % "2.6.0",
