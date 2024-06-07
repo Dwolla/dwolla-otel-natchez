@@ -44,7 +44,7 @@ lazy val core = project.in(file("core"))
       "org.typelevel" %% "cats-mtl" % "1.4.0",
       "org.typelevel" %% "log4cats-core" % "2.6.0",
       "io.circe" %% "circe-literal" % "0.14.6",
-      "org.typelevel" %% "jawn-parser" % "1.5.1" % Provided,
+      "org.typelevel" %% "jawn-parser" % "1.6.0" % Provided,
       "io.opentelemetry" % "opentelemetry-api" % otelApiV,
       "io.opentelemetry" % "opentelemetry-context" % "1.39.0",
       "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.39.0",
