@@ -20,10 +20,19 @@ import org.typelevel.log4cats.LoggerFactory
 
 object OpenTelemetryAtDwolla {
   def apply[F[_] : Async : Env : LoggerFactory : Random](serviceName: String,
+                                                         serviceVersion: String,
                                                          env: DwollaEnvironment): Resource[F, EntryPoint[F]] =
-    apply(serviceName, env, logTraces = false)
+    apply(serviceName, serviceVersion, env, logTraces = false)
 
   def apply[F[_] : Async : Env : LoggerFactory : Random](serviceName: String,
+                                                         serviceVersion: String,
+                                                         env: DwollaEnvironment,
+                                                         logTraces: Boolean): Resource[F, EntryPoint[F]] =
+    Dispatcher.parallel(await = true)
+      .flatMap(OpenTelemetryAtDwolla(serviceName, serviceVersion.some, env, logTraces, _))
+
+  def apply[F[_] : Async : Env : LoggerFactory : Random](serviceName: String,
+                                                         serviceVersion: Option[String],
                                                          env: DwollaEnvironment,
                                                          logTraces: Boolean,
                                                          dispatcher: Dispatcher[F]): Resource[F, EntryPoint[F]] =
@@ -37,18 +46,13 @@ object OpenTelemetryAtDwolla {
             SimpleSpanProcessor.create(new LoggingSpanExporter(dispatcher))
           }
       }
-      .flatMap(buildOtel(serviceName, env, _, AwsXrayIdGenerator(dispatcher).some))
-
-  def apply[F[_] : Async : Env : LoggerFactory : Random](serviceName: String,
-                                                         env: DwollaEnvironment,
-                                                         logTraces: Boolean): Resource[F, EntryPoint[F]] =
-    Dispatcher.parallel(await = true)
-      .flatMap(OpenTelemetryAtDwolla(serviceName, env, logTraces, _))
+      .flatMap(buildOtel(serviceName, env, _, AwsXrayIdGenerator(dispatcher).some, serviceVersion))
 
   private def buildOtel[F[_] : Sync : Env](serviceName: String,
                                            env: DwollaEnvironment,
                                            loggingProcessor: Option[SpanProcessor],
                                            awsXrayIdGenerator: Option[AwsXrayIdGenerator[F]],
+                                           version: Option[String],
                                           ): Resource[F, EntryPoint[F]] =
     OpenTelemetry.entryPoint(globallyRegister = true) { sdkBuilder =>
       // TODO consider whether to use the OpenTelemetry SDK Autoconfigure module to support all the environment variables https://github.com/open-telemetry/opentelemetry-java/tree/main/sdk-extensions/autoconfigure
@@ -84,10 +88,14 @@ object OpenTelemetryAtDwolla {
                         .setResource {
                           OTResource
                             .getDefault
-                            .merge(OTResource.create(Attributes.of(
-                              ResourceAttributes.SERVICE_NAME, serviceName,
-                              ResourceAttributes.DEPLOYMENT_ENVIRONMENT, env.name,
-                            )))
+                            .merge(OTResource.create {
+                              version.foldl {
+                                Attributes.builder()
+                                  .put(ResourceAttributes.SERVICE_NAME, serviceName)
+                                  .put(ResourceAttributes.DEPLOYMENT_ENVIRONMENT, env.name)
+                              }(_.put(ResourceAttributes.SERVICE_VERSION, _))
+                                .build()
+                            })
                         }
                     }(_ setIdGenerator _)
                   }(_ addSpanProcessor _)
@@ -97,7 +105,7 @@ object OpenTelemetryAtDwolla {
         }
     }
 
-  @deprecated("Doesn't log. Unless F[_]: Async, doesn't generate X-Ray compatible trace IDs", "0.2.3")
+  @deprecated("Doesn't log. Unless F[_]: Async, doesn't generate X-Ray compatible trace IDs. Only maintained for binary compatibility.", "0.2.3")
   def apply[F[_]](serviceName: String, env: DwollaEnvironment, F: Sync[F], E: Env[F]): Resource[F, EntryPoint[F]] =
     F match {
       case async: Async[F] =>
@@ -109,6 +117,25 @@ object OpenTelemetryAtDwolla {
             OpenTelemetryAtDwolla(serviceName, env)(async, E, NoOpFactory(F), _)
           }
       case _ =>
-        buildOtel(serviceName, env, None, None)(F, E)
+        buildOtel(serviceName, env, None, None, None)(F, E)
     }
+
+  @deprecated("provide service version; only maintained for binary compatibility", "0.2.3")
+  def apply[F[_] : Async : Env : LoggerFactory : Random](serviceName: String,
+                                                         env: DwollaEnvironment): Resource[F, EntryPoint[F]] =
+    apply(serviceName, env, logTraces = false)
+  @deprecated("provide service version; only maintained for binary compatibility", "0.2.3")
+  def apply[F[_] : Async : Env : LoggerFactory : Random](serviceName: String,
+                                                         env: DwollaEnvironment,
+                                                         logTraces: Boolean,
+                                                         dispatcher: Dispatcher[F]): Resource[F, EntryPoint[F]] =
+    OpenTelemetryAtDwolla(serviceName, None, env, logTraces, dispatcher)
+
+  @deprecated("provide service version; only maintained for binary compatibility", "0.2.3")
+  def apply[F[_] : Async : Env : LoggerFactory : Random](serviceName: String,
+                                                         env: DwollaEnvironment,
+                                                         logTraces: Boolean): Resource[F, EntryPoint[F]] =
+    Dispatcher.parallel(await = true)
+      .flatMap(OpenTelemetryAtDwolla(serviceName, None, env, logTraces, _))
+
 }
