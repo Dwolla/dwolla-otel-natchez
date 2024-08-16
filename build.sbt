@@ -1,4 +1,4 @@
-ThisBuild / tlBaseVersion := "0.3"
+ThisBuild / tlBaseVersion := "0.2"
 
 ThisBuild / organization := "com.dwolla"
 ThisBuild / organizationName := "Dwolla"
@@ -54,7 +54,7 @@ lazy val core = project.in(file("core"))
       "io.opentelemetry" % "opentelemetry-sdk-trace" % otelTraceSdkV,
       "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.23.1-alpha",
       "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % "1.32.0-alpha",
-    )
+    ),
   )
   .dependsOn(`aws-xray-id-generator`)
 
@@ -67,5 +67,6 @@ lazy val `aws-xray-id-generator` = project
       "org.typelevel" %% "cats-effect" % catsEffectV,
       "io.opentelemetry" % "opentelemetry-api" % otelApiV,
       "io.opentelemetry" % "opentelemetry-sdk-trace" % otelTraceSdkV,
-    )
+    ),
+    tlVersionIntroduced := Map("2.12" -> "0.2.3", "2.13" -> "0.2.3", "3" -> "0.2.3"),
   )
