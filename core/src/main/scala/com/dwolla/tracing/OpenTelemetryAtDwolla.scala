@@ -13,7 +13,6 @@ import io.opentelemetry.extension.trace.propagation.B3Propagator
 import io.opentelemetry.sdk.resources.Resource as OTResource
 import io.opentelemetry.sdk.trace.`export`.{BatchSpanProcessor, SimpleSpanProcessor}
 import io.opentelemetry.sdk.trace.{SdkTracerProvider, SdkTracerProviderBuilder, SpanProcessor}
-import io.opentelemetry.semconv.ResourceAttributes
 import natchez.*
 import natchez.opentelemetry.OpenTelemetry
 import org.typelevel.log4cats.LoggerFactory
@@ -91,9 +90,9 @@ object OpenTelemetryAtDwolla {
                             .merge(OTResource.create {
                               version.foldl {
                                 Attributes.builder()
-                                  .put(ResourceAttributes.SERVICE_NAME, serviceName)
-                                  .put(ResourceAttributes.DEPLOYMENT_ENVIRONMENT, env.name)
-                              }(_.put(ResourceAttributes.SERVICE_VERSION, _))
+                                  .put(OtelAttributes.serviceName, serviceName)
+                                  .put(OtelAttributes.deploymentEnvironmentName, env.name)
+                              }(_.put(OtelAttributes.serviceVersion, _))
                                 .build()
                             })
                         }

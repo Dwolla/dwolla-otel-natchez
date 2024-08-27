@@ -36,25 +36,31 @@ lazy val core = project.in(file("core"))
   .settings(
     name := "dwolla-otel-natchez",
     description := "Utilities for configuring a Natchez EntryPoint for OpenTelemetry at Dwolla",
-    libraryDependencies ++= Seq(
-      "org.tpolecat" %% "natchez-core" % "0.3.5",
-      "org.tpolecat" %% "natchez-opentelemetry" % "0.3.5",
-      "org.typelevel" %% "cats-core" % "2.12.0",
-      "org.typelevel" %% "cats-effect" % catsEffectV,
-      "org.typelevel" %% "cats-mtl" % "1.5.0",
-      "org.typelevel" %% "log4cats-core" % "2.7.0",
-      "io.circe" %% "circe-literal" % "0.14.9",
-      "org.typelevel" %% "jawn-parser" % "1.6.0" % Provided,
-      "io.opentelemetry" % "opentelemetry-api" % otelApiV,
-      "io.opentelemetry" % "opentelemetry-context" % "1.41.0",
-      "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.41.0",
-      "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % "1.41.0",
-      "io.opentelemetry" % "opentelemetry-sdk" % "1.41.0",
-      "io.opentelemetry" % "opentelemetry-sdk-common" % "1.41.0",
-      "io.opentelemetry" % "opentelemetry-sdk-trace" % otelTraceSdkV,
-      "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.23.1-alpha",
-      "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % "1.32.0-alpha",
-    ),
+    libraryDependencies ++= {
+      val otelSemConvV = "1.27.0-alpha"
+
+      Seq(
+        "org.tpolecat" %% "natchez-core" % "0.3.5",
+        "org.tpolecat" %% "natchez-opentelemetry" % "0.3.5",
+        "org.typelevel" %% "cats-core" % "2.12.0",
+        "org.typelevel" %% "cats-effect" % catsEffectV,
+        "org.typelevel" %% "cats-mtl" % "1.5.0",
+        "org.typelevel" %% "log4cats-core" % "2.7.0",
+        "io.circe" %% "circe-literal" % "0.14.9",
+        "org.typelevel" %% "jawn-parser" % "1.6.0" % Provided,
+        "io.opentelemetry" % "opentelemetry-api" % otelApiV,
+        "io.opentelemetry" % "opentelemetry-context" % "1.41.0",
+        "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.41.0",
+        "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % "1.41.0",
+        "io.opentelemetry" % "opentelemetry-sdk" % "1.41.0",
+        "io.opentelemetry" % "opentelemetry-sdk-common" % "1.41.0",
+        "io.opentelemetry" % "opentelemetry-sdk-trace" % otelTraceSdkV,
+        "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % "1.32.0-alpha",
+        "io.opentelemetry.semconv" % "opentelemetry-semconv" % otelSemConvV % Test,
+        "io.opentelemetry.semconv" % "opentelemetry-semconv-incubating" % otelSemConvV % Test,
+        "org.scalameta" %% "munit" % "1.0.1" % Test,
+      )
+    },
   )
   .dependsOn(`aws-xray-id-generator`)
 
