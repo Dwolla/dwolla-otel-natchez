@@ -10,7 +10,7 @@ ThisBuild / developers := List(
 
 ThisBuild / tlSonatypeUseLegacyHost := true
 
-val Scala3 = "3.3.4"
+val Scala3 = "3.3.5"
 ThisBuild / crossScalaVersions := Seq(Scala3, "2.13.16", "2.12.20")
 ThisBuild / scalaVersion := Scala3 // the default Scala
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17"))
