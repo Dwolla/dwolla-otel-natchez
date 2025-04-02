@@ -37,7 +37,7 @@ lazy val core = project.in(file("core"))
     name := "dwolla-otel-natchez",
     description := "Utilities for configuring a Natchez EntryPoint for OpenTelemetry at Dwolla",
     libraryDependencies ++= {
-      val otelSemConvV = "1.27.0-alpha"
+      val otelSemConvV = "1.32.0"
 
       Seq(
         "org.tpolecat" %% "natchez-core" % "0.3.8",
