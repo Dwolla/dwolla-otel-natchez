@@ -8,7 +8,7 @@ ThisBuild / developers := List(
   tlGitHubDev("bpholt", "Brian Holt")
 )
 
-ThisBuild / tlSonatypeUseLegacyHost := true
+ThisBuild / sonatypeCredentialHost := xerial.sbt.Sonatype.sonatypeLegacy
 
 val Scala3 = "3.3.5"
 ThisBuild / crossScalaVersions := Seq(Scala3, "2.13.16", "2.12.20")
