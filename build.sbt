@@ -37,8 +37,6 @@ lazy val core = project.in(file("core"))
     name := "dwolla-otel-natchez",
     description := "Utilities for configuring a Natchez EntryPoint for OpenTelemetry at Dwolla",
     libraryDependencies ++= {
-      val otelSemConvV = "1.32.0"
-
       Seq(
         "org.tpolecat" %% "natchez-core" % "0.3.8",
         "org.tpolecat" %% "natchez-opentelemetry" % "0.3.8",
@@ -56,8 +54,8 @@ lazy val core = project.in(file("core"))
         "io.opentelemetry" % "opentelemetry-sdk-common" % "1.49.0",
         "io.opentelemetry" % "opentelemetry-sdk-trace" % otelTraceSdkV,
         "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % "1.38.0-alpha",
-        "io.opentelemetry.semconv" % "opentelemetry-semconv" % otelSemConvV % Test,
-        "io.opentelemetry.semconv" % "opentelemetry-semconv-incubating" % otelSemConvV % Test,
+        "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.32.0" % Test,
+        "io.opentelemetry.semconv" % "opentelemetry-semconv-incubating" % "1.32.0-alpha" % Test,
         "org.scalameta" %% "munit" % "1.1.1" % Test,
       )
     },
