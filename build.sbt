@@ -29,8 +29,8 @@ lazy val root = tlCrossRootProject.aggregate(
 )
 
 lazy val catsEffectV = "3.6.1"
-lazy val otelApiV = "1.49.0"
-lazy val otelTraceSdkV = "1.49.0"
+lazy val otelApiV = "1.50.0"
+lazy val otelTraceSdkV = "1.50.0"
 
 lazy val core = project.in(file("core"))
   .settings(
@@ -47,11 +47,11 @@ lazy val core = project.in(file("core"))
         "io.circe" %% "circe-literal" % "0.14.13",
         "org.typelevel" %% "jawn-parser" % "1.6.0" % Provided,
         "io.opentelemetry" % "opentelemetry-api" % otelApiV,
-        "io.opentelemetry" % "opentelemetry-context" % "1.49.0",
-        "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.49.0",
-        "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % "1.49.0",
-        "io.opentelemetry" % "opentelemetry-sdk" % "1.49.0",
-        "io.opentelemetry" % "opentelemetry-sdk-common" % "1.49.0",
+        "io.opentelemetry" % "opentelemetry-context" % "1.50.0",
+        "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.50.0",
+        "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % "1.50.0",
+        "io.opentelemetry" % "opentelemetry-sdk" % "1.50.0",
+        "io.opentelemetry" % "opentelemetry-sdk-common" % "1.50.0",
         "io.opentelemetry" % "opentelemetry-sdk-trace" % otelTraceSdkV,
         "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % "1.38.0-alpha",
         "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.32.0" % Test,
