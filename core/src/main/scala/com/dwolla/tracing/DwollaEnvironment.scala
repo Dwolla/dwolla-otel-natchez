@@ -10,6 +10,7 @@ object DwollaEnvironment {
   case object Uat extends DwollaEnvironment("Uat")
   case object Prod extends DwollaEnvironment("Prod")
   case object Sandbox extends DwollaEnvironment("Sandbox")
+  case object Admin extends DwollaEnvironment("Admin")
 
   def apply(env: String): Option[DwollaEnvironment] =
     resolveEnv.lift(env.toLowerCase)
@@ -20,5 +21,6 @@ object DwollaEnvironment {
     case "uat" => Uat
     case "prod" | "production" => Prod
     case "sandbox" => Sandbox
+    case "admin" => Admin
   }
 }
