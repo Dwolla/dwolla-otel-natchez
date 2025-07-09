@@ -8,7 +8,6 @@ ThisBuild / developers := List(
   tlGitHubDev("bpholt", "Brian Holt")
 )
 
-
 val Scala3 = "3.3.6"
 ThisBuild / crossScalaVersions := Seq(Scala3, "2.13.16", "2.12.20")
 ThisBuild / scalaVersion := Scala3 // the default Scala
@@ -25,6 +24,7 @@ ThisBuild / mergifyStewardConfig ~= { _.map {
 lazy val root = tlCrossRootProject.aggregate(
   core,
   `aws-xray-id-generator`,
+  scalafix,
 )
 
 lazy val catsEffectV = "3.6.1"
@@ -72,4 +72,16 @@ lazy val `aws-xray-id-generator` = project
       "io.opentelemetry" % "opentelemetry-sdk-trace" % otelTraceSdkV,
     ),
     tlVersionIntroduced := Map("2.12" -> "0.2.3", "2.13" -> "0.2.3", "3" -> "0.2.3"),
+  )
+
+lazy val scalafix = project
+  .in(file("scalafix"))
+  .settings(
+    name := "dwolla-otel-natchez-scalafix",
+    description := "Scalafix rules for migrating to newer versions of dwolla-otel-natchez",
+    crossScalaVersions := Seq("2.13.16", "2.12.20"),
+    libraryDependencies ++= Seq(
+      "ch.epfl.scala" %% "scalafix-core" % _root_.scalafix.sbt.BuildInfo.scalafixVersion,
+      "ch.epfl.scala" %% "scalafix-testkit" % _root_.scalafix.sbt.BuildInfo.scalafixVersion % Test cross CrossVersion.full,
+    ),
   )
