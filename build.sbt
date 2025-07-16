@@ -27,7 +27,7 @@ lazy val root = tlCrossRootProject.aggregate(
   `aws-xray-id-generator`,
 )
 
-lazy val catsEffectV = "3.6.1"
+lazy val catsEffectV = "3.6.2"
 lazy val otelApiV = "1.52.0"
 lazy val otelTraceSdkV = "1.52.0"
 
