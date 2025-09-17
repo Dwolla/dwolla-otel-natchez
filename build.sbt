@@ -55,7 +55,7 @@ lazy val core = project.in(file("core"))
         "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % "1.38.0-alpha",
         "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.37.0" % Test,
         "io.opentelemetry.semconv" % "opentelemetry-semconv-incubating" % "1.32.0-alpha" % Test,
-        "org.scalameta" %% "munit" % "1.1.2" % Test,
+        "org.scalameta" %% "munit" % "1.2.0" % Test,
       )
     },
   )
