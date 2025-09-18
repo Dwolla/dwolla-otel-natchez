@@ -60,7 +60,10 @@ object OpenTelemetryAtDwolla {
         .flatMap { endpoint =>
           val otelSpanExporter = Sync[F].delay {
             val builder =
-              endpoint.foldl(OtlpGrpcSpanExporter.builder())(_ setEndpoint _).build()
+              endpoint
+                .foldl(OtlpGrpcSpanExporter.builder())(_ setEndpoint _)
+                .setCompression("gzip")
+                .build()
 
             BatchSpanProcessor.builder(builder).build()
           }
