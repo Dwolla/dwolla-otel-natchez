@@ -58,14 +58,15 @@ object OpenTelemetryAtDwolla {
       Env[F].get("OTEL_EXPORTER_OTLP_ENDPOINT")
         .toResource
         .flatMap { endpoint =>
-          Resource.fromAutoCloseable(Sync[F].delay {
-              val builder =
-                endpoint.foldl(OtlpGrpcSpanExporter.builder())(_ setEndpoint _).build()
+          val otelSpanExporter = Sync[F].delay {
+            val builder =
+              endpoint.foldl(OtlpGrpcSpanExporter.builder())(_ setEndpoint _).build()
 
-              BatchSpanProcessor.builder(builder).build()
-            })
-            .map(_.pure[List])
-            .map(loggingProcessor.toList ::: _)
+            BatchSpanProcessor.builder(builder).build()
+          }
+
+          Resource.fromAutoCloseable(otelSpanExporter)
+            .map(_ :: loggingProcessor.toList)
         }
         .evalMap { spanProcessors =>
           Sync[F].delay {
