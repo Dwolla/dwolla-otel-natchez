@@ -65,7 +65,10 @@ object OpenTelemetryAtDwolla {
                 .setCompression("gzip")
                 .build()
 
-            BatchSpanProcessor.builder(builder).build()
+            BatchSpanProcessor
+              .builder(builder)
+              .setMaxExportBatchSize(128) // Configure smaller export batches to ensure payloads remain well under 4 MiB
+              .build()
           }
 
           Resource.fromAutoCloseable(otelSpanExporter)
