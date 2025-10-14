@@ -33,3 +33,11 @@ pull_request_rules:
       add:
       - core
       remove: []
+- name: Label testkit PRs
+  conditions:
+  - files~=^testkit/
+  actions:
+    label:
+      add:
+      - testkit
+      remove: []
