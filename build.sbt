@@ -9,7 +9,7 @@ ThisBuild / developers := List(
 )
 
 
-val Scala3 = "3.3.6"
+val Scala3 = "3.3.7"
 ThisBuild / crossScalaVersions := Seq(Scala3, "2.13.17", "2.12.20")
 ThisBuild / scalaVersion := Scala3 // the default Scala
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17"))
