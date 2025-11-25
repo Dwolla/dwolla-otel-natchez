@@ -8,7 +8,6 @@ ThisBuild / developers := List(
   tlGitHubDev("bpholt", "Brian Holt")
 )
 
-
 val Scala3 = "3.3.7"
 ThisBuild / crossScalaVersions := Seq(Scala3, "2.13.18", "2.12.20")
 ThisBuild / scalaVersion := Scala3 // the default Scala
@@ -25,6 +24,7 @@ ThisBuild / mergifyStewardConfig ~= { _.map {
 lazy val root = tlCrossRootProject.aggregate(
   core,
   `aws-xray-id-generator`,
+  `dwolla-xray-annotations`,
   testkit,
 )
 
@@ -78,6 +78,20 @@ lazy val `aws-xray-id-generator` = crossProject(JVMPlatform)
   )
   .jvmSettings(
     tlVersionIntroduced := Map("2.12" -> "0.2.3", "2.13" -> "0.2.3", "3" -> "0.2.3"),
+  )
+
+lazy val `dwolla-xray-annotations` = crossProject(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("dwolla-xray-annotations"))
+  .settings(
+    name := "dwolla-xray-annotations",
+    description := "Constants for OTel attribute names that should be indexed by X-Ray as annotations",
+    libraryDependencies ++= Seq(
+      "org.scalameta" %%% "munit" % "1.2.1" % Test,
+    ),
+  )
+  .jvmSettings(
+    tlVersionIntroduced := List("2.12", "2.13", "3").map(_ -> "0.2.9").toMap,
   )
 
 lazy val testkit = crossProject(JVMPlatform)
