@@ -33,6 +33,14 @@ pull_request_rules:
       add:
       - core
       remove: []
+- name: Label dwolla-xray-annotations PRs
+  conditions:
+  - files~=^dwolla-xray-annotations/
+  actions:
+    label:
+      add:
+      - dwolla-xray-annotations
+      remove: []
 - name: Label testkit PRs
   conditions:
   - files~=^testkit/
