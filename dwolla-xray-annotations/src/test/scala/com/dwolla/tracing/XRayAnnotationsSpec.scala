@@ -12,15 +12,19 @@ class XRayAnnotationsSpec extends FunSuite {
   }
 
   test("client.account.id") {
-    assertEquals(XRayAnnotationKey.clientAccountId, "client.account.id")
+    assertEquals(XRayAnnotationKey.clientAccountId, "com.dwolla.client.account.id")
   }
 
   test("enduser.account.id") {
-    assertEquals(XRayAnnotationKey.endUserAccountId, "enduser.account.id")
+    assertEquals(XRayAnnotationKey.endUserAccountId, "com.dwolla.enduser.account.id")
   }
 
   test("transaction.id") {
-    assertEquals(XRayAnnotationKey.transactionId, "transaction.id")
+    assertEquals(XRayAnnotationKey.transactionId, "com.dwolla.transaction.id")
+  }
+
+  test("event-bus.message-handling-result") {
+    assertEquals(XRayAnnotationKey.eventBusMessageResult, "com.dwolla.event-bus.message-handling-result")
   }
 }
 
