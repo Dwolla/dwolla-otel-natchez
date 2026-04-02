@@ -56,7 +56,7 @@ lazy val core = crossProject(JVMPlatform)
         "io.opentelemetry" % "opentelemetry-sdk-common" % "1.58.0",
         "io.opentelemetry" % "opentelemetry-sdk-trace" % otelTraceSdkV,
         "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % "1.52.0-alpha",
-        "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.37.0" % Test,
+        "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.40.0" % Test,
         "io.opentelemetry.semconv" % "opentelemetry-semconv-incubating" % "1.37.0-alpha" % Test,
         "org.scalameta" %%% "munit" % "1.2.1" % Test,
       )
