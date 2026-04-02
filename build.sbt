@@ -40,8 +40,8 @@ lazy val core = crossProject(JVMPlatform)
     description := "Utilities for configuring a Natchez EntryPoint for OpenTelemetry at Dwolla",
     libraryDependencies ++= {
       Seq(
-        "org.tpolecat" %%% "natchez-core" % "0.3.8",
-        "org.tpolecat" %%% "natchez-opentelemetry" % "0.3.8",
+        "org.tpolecat" %%% "natchez-core" % "0.3.9",
+        "org.tpolecat" %%% "natchez-opentelemetry" % "0.3.9",
         "org.typelevel" %%% "cats-core" % "2.13.0",
         "org.typelevel" %%% "cats-effect" % catsEffectV,
         "org.typelevel" %%% "cats-mtl" % "1.6.0",
@@ -101,8 +101,8 @@ lazy val testkit = crossProject(JVMPlatform)
     name := "dwolla-otel-natchez-testkit",
     libraryDependencies ++= {
       Seq(
-        "org.tpolecat" %%% "natchez-core" % "0.3.8",
-        "org.tpolecat" %%% "natchez-testkit" % "0.3.8",
+        "org.tpolecat" %%% "natchez-core" % "0.3.9",
+        "org.tpolecat" %%% "natchez-testkit" % "0.3.9",
         "org.typelevel" %%% "munit-cats-effect" % "2.1.0",
       )
     },
