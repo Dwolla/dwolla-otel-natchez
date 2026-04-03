@@ -103,7 +103,7 @@ lazy val testkit = crossProject(JVMPlatform)
       Seq(
         "org.tpolecat" %%% "natchez-core" % "0.3.9",
         "org.tpolecat" %%% "natchez-testkit" % "0.3.9",
-        "org.typelevel" %%% "munit-cats-effect" % "2.1.0",
+        "org.typelevel" %%% "munit-cats-effect" % "2.2.0",
       )
     },
   )
