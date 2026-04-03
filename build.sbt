@@ -28,7 +28,7 @@ lazy val root = tlCrossRootProject.aggregate(
   testkit,
 )
 
-lazy val catsEffectV = "3.6.3"
+lazy val catsEffectV = "3.7.0"
 lazy val otelApiV = "1.60.1"
 lazy val otelTraceSdkV = "1.60.1"
 
