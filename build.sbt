@@ -33,6 +33,7 @@ lazy val root = tlCrossRootProject.aggregate(
   otel4sCommon,
   otel4sOteljava,
   otel4sOteljavaRuntimeMetrics,
+  otel4sOteljavaEndToEnd,
 )
 
 lazy val catsEffectV = "3.7.1"
@@ -95,13 +96,17 @@ lazy val isOtel4sScalaVersion: Def.Initialize[Boolean] = Def.setting {
   scalaBinaryVersion.value != "2.12"
 }
 
-lazy val otel4sModuleSettings: Seq[Def.Setting[_]] = Seq(
+// Only the source gates, for unpublished modules, whose NoPublishPlugin publish and MiMa settings must stay.
+lazy val otel4sSourceGateSettings: Seq[Def.Setting[_]] = Seq(
   Compile / unmanagedSourceDirectories := {
     if (isOtel4sScalaVersion.value) (Compile / unmanagedSourceDirectories).value else Seq.empty
   },
   Test / unmanagedSourceDirectories := {
     if (isOtel4sScalaVersion.value) (Test / unmanagedSourceDirectories).value else Seq.empty
   },
+)
+
+lazy val otel4sModuleSettings: Seq[Def.Setting[_]] = otel4sSourceGateSettings ++ Seq(
   publish / skip := !isOtel4sScalaVersion.value,
   // sbt-typelevel-mima decides whether to check previous artifacts from `publishArtifact`, not
   // `publish / skip`; without this, 2.12 would look for _2.12 artifacts that were never published.
@@ -358,6 +363,26 @@ lazy val otel4sOteljavaRuntimeMetrics = crossProject(JVMPlatform)
     },
   )
   .dependsOn(otel4sOteljava % "compile->compile;test->test")
+
+// Real OTLP/gRPC export to a real OpenTelemetry Collector in Docker. Not published.
+lazy val otel4sOteljavaEndToEnd = crossProject(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("otel4s-oteljava-e2e"))
+  .enablePlugins(NoPublishPlugin)
+  .settings(otel4sSourceGateSettings)
+  .settings(
+    name := "dwolla-otel4s-oteljava-e2e",
+    libraryDependencies ++= {
+      if (isOtel4sScalaVersion.value)
+        Seq(
+          "com.dimafeng" %% "testcontainers-scala-core" % "0.44.1" % Test,
+          "org.scalameta" %%% "munit" % "1.3.6" % Test,
+          "org.typelevel" %%% "munit-cats-effect" % "2.2.1" % Test,
+        )
+      else Seq.empty
+    },
+  )
+  .dependsOn(otel4sOteljava)
 
 ThisBuild / githubWorkflowBuild ++= Seq(
   WorkflowStep.Sbt(
