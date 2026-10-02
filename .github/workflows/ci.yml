@@ -69,6 +69,13 @@ jobs:
         if: matrix.java == 'temurin@17' && matrix.os == 'ubuntu-22.04'
         run: sbt 'project ${{ matrix.project }}' '++ ${{ matrix.scala }}' doc
 
+      - name: Check OpenTelemetry versions
+        run: sbt 'project ${{ matrix.project }}' '++ ${{ matrix.scala }}' checkOtelVersions
+
+      - name: Test the build's own code
+        if: matrix.scala == '3'
+        run: sbt 'project ${{ matrix.project }}' '++ ${{ matrix.scala }}' 'reload plugins' test
+
       - name: Make target directories
         if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
         run: mkdir -p logging-span-exporter/.jvm/target natchez/.jvm/target dwolla-xray-annotations/.jvm/target core/.jvm/target aws-xray-id-generator/.jvm/target testkit/.jvm/target project/target
