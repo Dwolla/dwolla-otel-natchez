@@ -34,7 +34,7 @@ lazy val otelTraceSdkV = "1.66.0"
 
 lazy val natchez = crossProject(JVMPlatform)
   .crossType(CrossType.Pure)
-  .in(file("core"))
+  .in(file("natchez"))
   .settings(
     name := "dwolla-otel-natchez",
     description := "Utilities for configuring a Natchez EntryPoint for OpenTelemetry at Dwolla",
