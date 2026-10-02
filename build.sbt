@@ -32,6 +32,7 @@ lazy val root = tlCrossRootProject.aggregate(
   testkit,
   otel4sCommon,
   otel4sOteljava,
+  otel4sOteljavaRuntimeMetrics,
 )
 
 lazy val catsEffectV = "3.7.1"
@@ -333,6 +334,30 @@ lazy val otel4sOteljava = crossProject(JVMPlatform)
     },
   )
   .dependsOn(otel4sCommon, loggingSpanExporter, `aws-xray-id-generator`)
+
+lazy val otel4sOteljavaRuntimeMetrics = crossProject(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("otel4s-oteljava-runtime-metrics"))
+  .settings(otel4sModuleSettings)
+  .settings(otelVersionCheckSettings)
+  .settings(
+    name := "dwolla-otel4s-oteljava-runtime-metrics",
+    description := "Opt-in JVM runtime metrics for dwolla-otel4s-oteljava",
+    libraryDependencies ++= {
+      if (isOtel4sScalaVersion.value)
+        Seq(
+          "io.opentelemetry.instrumentation" % "opentelemetry-runtime-telemetry" % s"$otelInstrumentationV-alpha",
+          // runtime-telemetry 2.31.1-alpha asks for api-incubator 1.65.0-alpha; keep it on the otelV line
+          // with the rest of OpenTelemetry Java
+          "io.opentelemetry" % "opentelemetry-api-incubator" % s"$otelV-alpha",
+          "io.opentelemetry" % "opentelemetry-sdk-testing" % otelV % Test,
+          "org.scalameta" %%% "munit" % "1.3.6" % Test,
+          "org.typelevel" %%% "munit-cats-effect" % "2.2.1" % Test,
+        )
+      else Seq.empty
+    },
+  )
+  .dependsOn(otel4sOteljava % "compile->compile;test->test")
 
 ThisBuild / githubWorkflowBuild ++= Seq(
   WorkflowStep.Sbt(
