@@ -31,6 +31,7 @@ lazy val root = tlCrossRootProject.aggregate(
   `dwolla-xray-annotations`,
   testkit,
   otel4sCommon,
+  otel4sOteljava,
 )
 
 lazy val catsEffectV = "3.7.1"
@@ -267,6 +268,42 @@ lazy val otel4sCommon = crossProject(JVMPlatform)
     },
   )
   .dependsOn(core)
+
+lazy val otel4sOteljava = crossProject(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("otel4s-oteljava"))
+  .settings(otel4sModuleSettings)
+  .settings(otelVersionCheckSettings)
+  .settings(
+    name := "dwolla-otel4s-oteljava",
+    description := "Configures otel4s on the OpenTelemetry Java SDK with Dwolla's defaults",
+    libraryDependencies ++= {
+      if (isOtel4sScalaVersion.value)
+        Seq(
+          "org.typelevel" %%% "otel4s-oteljava" % otel4sV,
+          "org.typelevel" %%% "cats-effect" % catsEffectV,
+          "org.typelevel" %%% "log4cats-core" % "2.8.0",
+          "io.opentelemetry" % "opentelemetry-api" % otelV,
+          "io.opentelemetry" % "opentelemetry-context" % otelV,
+          "io.opentelemetry" % "opentelemetry-sdk" % otelV,
+          "io.opentelemetry" % "opentelemetry-sdk-common" % otelV,
+          "io.opentelemetry" % "opentelemetry-sdk-trace" % otelV,
+          "io.opentelemetry" % "opentelemetry-sdk-metrics" % otelV,
+          "io.opentelemetry" % "opentelemetry-sdk-logs" % otelV,
+          "io.opentelemetry" % "opentelemetry-sdk-extension-autoconfigure" % otelV,
+          "io.opentelemetry" % "opentelemetry-sdk-extension-autoconfigure-spi" % otelV,
+          "io.opentelemetry" % "opentelemetry-exporter-otlp" % otelV,
+          "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % otelV,
+          "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % s"$otelContribV-alpha",
+          "io.opentelemetry" % "opentelemetry-sdk-testing" % otelV % Test,
+          "org.scalameta" %%% "munit" % "1.3.6" % Test,
+          "org.typelevel" %%% "munit-cats-effect" % "2.2.1" % Test,
+          "org.typelevel" %%% "log4cats-testing" % "2.8.0" % Test,
+        )
+      else Seq.empty
+    },
+  )
+  .dependsOn(otel4sCommon, loggingSpanExporter, `aws-xray-id-generator`)
 
 ThisBuild / githubWorkflowBuild ++= Seq(
   WorkflowStep.Sbt(
