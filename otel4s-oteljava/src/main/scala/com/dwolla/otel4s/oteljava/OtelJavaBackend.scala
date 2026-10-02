@@ -2,9 +2,10 @@ package com.dwolla.otel4s.oteljava
 
 import cats.effect.*
 import cats.effect.std.{Dispatcher, Random}
+import cats.effect.syntax.all.*
 import cats.syntax.all.*
 import com.dwolla.otel4s.*
-import com.dwolla.tracing.{AwsXrayIdGenerator, ResourceAttributeNames}
+import com.dwolla.tracing.{AwsXrayIdGenerator, LoggingSpanExporter, ResourceAttributeNames}
 import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.api.common.AttributeKey.stringKey
 import io.opentelemetry.api.common.Attributes
@@ -12,6 +13,8 @@ import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdkBuilder
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties
 import io.opentelemetry.sdk.resources.Resource as OTResource
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder
+import io.opentelemetry.sdk.trace.`export`.SimpleSpanProcessor
+import org.typelevel.log4cats.Logger
 import org.typelevel.otel4s.metrics.MeterProvider
 import org.typelevel.otel4s.oteljava.OtelJava
 import org.typelevel.otel4s.oteljava.context.LocalContextProvider
@@ -29,12 +32,13 @@ final class OtelJavaBackend[F[_] : Async : LocalContextProvider : Random] privat
   override def start(settings: OtelAtDwollaSettings[F]): Resource[F, (TracerProvider[F], MeterProvider[F])] =
     for {
       dispatcher <- Dispatcher.parallel[F](await = true)
-      otelJava <- OtelJava.autoConfigured[F](configure(settings, dispatcher))
+      spanLogger <- settings.spanLogging.traverse(_.fromName("com.dwolla.otel4s.oteljava.LoggedSpans").toResource)
+      otelJava <- OtelJava.autoConfigured[F](configure(settings, dispatcher, spanLogger))
       // acquired after the SDK, so released before it shuts down
       _ <- startupHooks.traverse_(_(otelJava.underlying))
     } yield (otelJava.tracerProvider, otelJava.meterProvider)
 
-  private def configure(settings: OtelAtDwollaSettings[F], dispatcher: Dispatcher[F])
+  private def configure(settings: OtelAtDwollaSettings[F], dispatcher: Dispatcher[F], spanLogger: Option[Logger[F]])
                        (builder: AutoConfiguredOpenTelemetrySdkBuilder): AutoConfiguredOpenTelemetrySdkBuilder = {
     val withDefaults =
       builder
@@ -46,7 +50,10 @@ final class OtelJavaBackend[F[_] : Async : LocalContextProvider : Random] privat
     val withTracing =
       if (settings.tracingEnabled)
         withDefaults.addTracerProviderCustomizer { (tracerProvider: SdkTracerProviderBuilder, _: ConfigProperties) =>
-          tracerProvider.setIdGenerator(AwsXrayIdGenerator(dispatcher))
+          spanLogger.foldLeft(tracerProvider.setIdGenerator(AwsXrayIdGenerator(dispatcher))) { (b, logger) =>
+            implicit val l: Logger[F] = logger
+            b.addSpanProcessor(SimpleSpanProcessor.create(new LoggingSpanExporter[F](dispatcher)))
+          }
         }
       else withDefaults
     val withRegistration = if (globalRegistration) withTracing.setResultAsGlobal() else withTracing
