@@ -47,7 +47,7 @@ lazy val core = crossProject(JVMPlatform)
         "org.typelevel" %%% "cats-mtl" % "1.7.0",
         "org.typelevel" %%% "log4cats-core" % "2.8.0",
         "io.circe" %%% "circe-literal" % "0.14.16",
-        "org.typelevel" %%% "jawn-parser" % "1.7.0" % Provided,
+        "org.typelevel" %%% "jawn-parser" % "1.8.0" % Provided,
         "io.opentelemetry" % "opentelemetry-api" % otelApiV,
         "io.opentelemetry" % "opentelemetry-context" % "1.66.0",
         "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.66.0",
