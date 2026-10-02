@@ -47,6 +47,16 @@ object OpenTelemetryAtDwolla {
       }
       .flatMap(buildOtel(serviceName, env, _, AwsXrayIdGenerator(dispatcher).some, serviceVersion))
 
+  private[tracing] def resourceAttributes(serviceName: String,
+                                          env: DwollaEnvironment,
+                                          version: Option[String]): Attributes =
+    version.foldl {
+      Attributes.builder()
+        .put(OtelAttributes.serviceName, serviceName)
+        .put(OtelAttributes.deploymentEnvironmentName, env.deploymentEnvironmentName)
+    }(_.put(OtelAttributes.serviceVersion, _))
+      .build()
+
   private def buildOtel[F[_] : Sync : Env](serviceName: String,
                                            env: DwollaEnvironment,
                                            loggingProcessor: Option[SpanProcessor],
@@ -94,14 +104,7 @@ object OpenTelemetryAtDwolla {
                         .setResource {
                           OTResource
                             .getDefault
-                            .merge(OTResource.create {
-                              version.foldl {
-                                Attributes.builder()
-                                  .put(OtelAttributes.serviceName, serviceName)
-                                  .put(OtelAttributes.deploymentEnvironmentName, env.name)
-                              }(_.put(OtelAttributes.serviceVersion, _))
-                                .build()
-                            })
+                            .merge(OTResource.create(resourceAttributes(serviceName, env, version)))
                         }
                     }(_ setIdGenerator _)
                   }(_ addSpanProcessor _)

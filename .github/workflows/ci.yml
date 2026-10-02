@@ -69,13 +69,20 @@ jobs:
         if: matrix.java == 'temurin@17' && matrix.os == 'ubuntu-22.04'
         run: sbt 'project ${{ matrix.project }}' '++ ${{ matrix.scala }}' doc
 
+      - name: Check OpenTelemetry versions
+        run: sbt 'project ${{ matrix.project }}' '++ ${{ matrix.scala }}' checkOtelVersions
+
+      - name: Test the build's own code
+        if: matrix.scala == '3'
+        run: sbt 'project ${{ matrix.project }}' '++ ${{ matrix.scala }}' 'reload plugins' test
+
       - name: Make target directories
         if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
-        run: mkdir -p dwolla-xray-annotations/.jvm/target core/.jvm/target aws-xray-id-generator/.jvm/target testkit/.jvm/target project/target
+        run: mkdir -p otel4s-oteljava/.jvm/target logging-span-exporter/.jvm/target otel4s-oteljava-runtime-metrics/.jvm/target natchez/.jvm/target otel4s-common/.jvm/target dwolla-xray-annotations/.jvm/target core/.jvm/target aws-xray-id-generator/.jvm/target testkit/.jvm/target project/target
 
       - name: Compress target directories
         if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
-        run: tar cf targets.tar dwolla-xray-annotations/.jvm/target core/.jvm/target aws-xray-id-generator/.jvm/target testkit/.jvm/target project/target
+        run: tar cf targets.tar otel4s-oteljava/.jvm/target logging-span-exporter/.jvm/target otel4s-oteljava-runtime-metrics/.jvm/target natchez/.jvm/target otel4s-common/.jvm/target dwolla-xray-annotations/.jvm/target core/.jvm/target aws-xray-id-generator/.jvm/target testkit/.jvm/target project/target
 
       - name: Upload target directories
         if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
@@ -202,5 +209,5 @@ jobs:
       - name: Submit Dependencies
         uses: scalacenter/sbt-dependency-submission@v2
         with:
-          modules-ignore: rootjs_3 rootjs_2.13 rootjs_2.12 rootjvm_3 rootjvm_2.13 rootjvm_2.12 rootnative_3 rootnative_2.13 rootnative_2.12
+          modules-ignore: rootjs_3 rootjs_2.13 rootjs_2.12 dwolla-otel4s-oteljava-e2e_3 dwolla-otel4s-oteljava-e2e_2.13 dwolla-otel4s-oteljava-e2e_2.12 rootjvm_3 rootjvm_2.13 rootjvm_2.12 rootnative_3 rootnative_2.13 rootnative_2.12
           configs-ignore: test scala-tool scala-doc-tool test-internal

@@ -41,6 +41,54 @@ pull_request_rules:
       add:
       - dwolla-xray-annotations
       remove: []
+- name: Label logging-span-exporter PRs
+  conditions:
+  - files~=^logging-span-exporter/
+  actions:
+    label:
+      add:
+      - logging-span-exporter
+      remove: []
+- name: Label natchez PRs
+  conditions:
+  - files~=^natchez/
+  actions:
+    label:
+      add:
+      - natchez
+      remove: []
+- name: Label otel4s-common PRs
+  conditions:
+  - files~=^otel4s-common/
+  actions:
+    label:
+      add:
+      - otel4s-common
+      remove: []
+- name: Label otel4s-oteljava PRs
+  conditions:
+  - files~=^otel4s-oteljava/
+  actions:
+    label:
+      add:
+      - otel4s-oteljava
+      remove: []
+- name: Label otel4s-oteljava-e2e PRs
+  conditions:
+  - files~=^otel4s-oteljava-e2e/
+  actions:
+    label:
+      add:
+      - otel4s-oteljava-e2e
+      remove: []
+- name: Label otel4s-oteljava-runtime-metrics PRs
+  conditions:
+  - files~=^otel4s-oteljava-runtime-metrics/
+  actions:
+    label:
+      add:
+      - otel4s-oteljava-runtime-metrics
+      remove: []
 - name: Label testkit PRs
   conditions:
   - files~=^testkit/
