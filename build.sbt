@@ -258,6 +258,7 @@ lazy val otel4sCommon = crossProject(JVMPlatform)
           "org.typelevel" %%% "otel4s-core-metrics" % otel4sV,
           "org.typelevel" %%% "cats-effect" % catsEffectV,
           "org.typelevel" %%% "log4cats-core" % "2.8.0",
+          "org.typelevel" %%% "log4cats-testing" % "2.8.0" % Test,
           "org.scalameta" %%% "munit" % "1.3.6" % Test,
           "org.scalameta" %%% "munit-scalacheck" % "1.3.1" % Test,
           "org.typelevel" %%% "munit-cats-effect" % "2.2.1" % Test,
