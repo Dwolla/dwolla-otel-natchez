@@ -57,6 +57,14 @@ pull_request_rules:
       add:
       - natchez
       remove: []
+- name: Label otel4s-common PRs
+  conditions:
+  - files~=^otel4s-common/
+  actions:
+    label:
+      add:
+      - otel4s-common
+      remove: []
 - name: Label testkit PRs
   conditions:
   - files~=^testkit/

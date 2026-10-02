@@ -30,6 +30,7 @@ lazy val root = tlCrossRootProject.aggregate(
   `aws-xray-id-generator`,
   `dwolla-xray-annotations`,
   testkit,
+  otel4sCommon,
 )
 
 lazy val catsEffectV = "3.7.1"
@@ -83,6 +84,27 @@ lazy val otelVersionCheckSettings: Seq[Def.Setting[_]] = Seq(
         sys.error(s"${name.value}: ${problems.size} OpenTelemetry version problem(s); see the errors above")
     }
   },
+)
+
+// otel4s publishes no _2.12 artifacts, so the otel4s modules are emptied and unpublished on 2.12 rather than
+// dropped from crossScalaVersions: narrowing crossScalaVersions breaks the root aggregate under `++ 2.12`.
+// natchez-tagless's build.sbt documents the full analysis on its otel4sTagless project.
+lazy val isOtel4sScalaVersion: Def.Initialize[Boolean] = Def.setting {
+  scalaBinaryVersion.value != "2.12"
+}
+
+lazy val otel4sModuleSettings: Seq[Def.Setting[_]] = Seq(
+  Compile / unmanagedSourceDirectories := {
+    if (isOtel4sScalaVersion.value) (Compile / unmanagedSourceDirectories).value else Seq.empty
+  },
+  Test / unmanagedSourceDirectories := {
+    if (isOtel4sScalaVersion.value) (Test / unmanagedSourceDirectories).value else Seq.empty
+  },
+  publish / skip := !isOtel4sScalaVersion.value,
+  // sbt-typelevel-mima decides whether to check previous artifacts from `publishArtifact`, not
+  // `publish / skip`; without this, 2.12 would look for _2.12 artifacts that were never published.
+  publishArtifact := isOtel4sScalaVersion.value,
+  tlVersionIntroduced := List("2.12", "2.13", "3").map(_ -> "0.2.9").toMap,
 )
 
 lazy val core = crossProject(JVMPlatform)
@@ -221,6 +243,29 @@ lazy val testkit = crossProject(JVMPlatform)
     tlVersionIntroduced := Map("2.12" -> "0.2.8", "2.13" -> "0.2.8", "3" -> "0.2.8"),
   )
   .dependsOn(natchez)
+
+lazy val otel4sCommon = crossProject(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("otel4s-common"))
+  .settings(otel4sModuleSettings)
+  .settings(
+    name := "dwolla-otel4s-common",
+    description := "Backend-neutral builder for configuring otel4s with Dwolla's defaults",
+    libraryDependencies ++= {
+      if (isOtel4sScalaVersion.value)
+        Seq(
+          "org.typelevel" %%% "otel4s-core-trace" % otel4sV,
+          "org.typelevel" %%% "otel4s-core-metrics" % otel4sV,
+          "org.typelevel" %%% "cats-effect" % catsEffectV,
+          "org.typelevel" %%% "log4cats-core" % "2.8.0",
+          "org.scalameta" %%% "munit" % "1.3.6" % Test,
+          "org.scalameta" %%% "munit-scalacheck" % "1.3.1" % Test,
+          "org.typelevel" %%% "munit-cats-effect" % "2.2.1" % Test,
+        )
+      else Seq.empty
+    },
+  )
+  .dependsOn(core)
 
 ThisBuild / githubWorkflowBuild ++= Seq(
   WorkflowStep.Sbt(
