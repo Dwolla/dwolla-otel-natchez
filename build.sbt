@@ -1,3 +1,5 @@
+import com.typesafe.tools.mima.core._
+
 ThisBuild / tlBaseVersion := "0.2"
 
 ThisBuild / organization := "com.dwolla"
@@ -75,6 +77,13 @@ lazy val natchez = crossProject(JVMPlatform)
   .settings(
     name := "dwolla-otel-natchez",
     description := "Utilities for configuring a Natchez EntryPoint for OpenTelemetry at Dwolla",
+    // DwollaEnvironment and LoggingSpanExporter live in dwolla-otel-core and otel-logging-span-exporter,
+    // with the same fully-qualified names, so consumers still get them through those dependencies;
+    // MiMa compares this jar alone.
+    mimaBinaryIssueFilters ++= Seq(
+      ProblemFilters.exclude[MissingClassProblem]("com.dwolla.tracing.DwollaEnvironment*"),
+      ProblemFilters.exclude[MissingClassProblem]("com.dwolla.tracing.LoggingSpanExporter*"),
+    ),
     libraryDependencies ++= {
       Seq(
         "org.tpolecat" %%% "natchez-core" % "0.3.10",
