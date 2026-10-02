@@ -22,7 +22,7 @@ ThisBuild / mergifyStewardConfig ~= { _.map {
 }}
 
 lazy val root = tlCrossRootProject.aggregate(
-  core,
+  natchez,
   `aws-xray-id-generator`,
   `dwolla-xray-annotations`,
   testkit,
@@ -32,7 +32,7 @@ lazy val catsEffectV = "3.7.1"
 lazy val otelApiV = "1.66.0"
 lazy val otelTraceSdkV = "1.66.0"
 
-lazy val core = crossProject(JVMPlatform)
+lazy val natchez = crossProject(JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("core"))
   .settings(
@@ -110,4 +110,4 @@ lazy val testkit = crossProject(JVMPlatform)
   .jvmSettings(
     tlVersionIntroduced := Map("2.12" -> "0.2.8", "2.13" -> "0.2.8", "3" -> "0.2.8"),
   )
-  .dependsOn(core)
+  .dependsOn(natchez)
