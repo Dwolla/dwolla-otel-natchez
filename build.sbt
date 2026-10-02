@@ -348,6 +348,8 @@ lazy val otel4sOteljavaRuntimeMetrics = crossProject(JVMPlatform)
   .settings(
     name := "dwolla-otel4s-oteljava-runtime-metrics",
     description := "Opt-in JVM runtime metrics for dwolla-otel4s-oteljava",
+    // depends on an -alpha artifact, so downstream sbt should treat any two 0.x versions as possibly incompatible
+    versionScheme := Some("semver-spec"),
     libraryDependencies ++= {
       if (isOtel4sScalaVersion.value)
         Seq(
