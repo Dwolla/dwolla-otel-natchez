@@ -42,6 +42,12 @@ lazy val core = crossProject(JVMPlatform)
   .settings(
     name := "dwolla-otel-core",
     description := "Dwolla environment and OpenTelemetry resource attribute names, with no OpenTelemetry dependency",
+    libraryDependencies ++= Seq(
+      "io.opentelemetry" % "opentelemetry-api" % otelApiV % Test,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.44.0" % Test,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv-incubating" % "1.37.0-alpha" % Test,
+      "org.scalameta" %%% "munit" % "1.3.6" % Test,
+    ),
   )
   .jvmSettings(
     tlVersionIntroduced := List("2.12", "2.13", "3").map(_ -> "0.2.9").toMap,
