@@ -25,6 +25,14 @@ pull_request_rules:
       add:
       - aws-xray-id-generator
       remove: []
+- name: Label core PRs
+  conditions:
+  - files~=^core/
+  actions:
+    label:
+      add:
+      - core
+      remove: []
 - name: Label dwolla-xray-annotations PRs
   conditions:
   - files~=^dwolla-xray-annotations/
@@ -32,6 +40,14 @@ pull_request_rules:
     label:
       add:
       - dwolla-xray-annotations
+      remove: []
+- name: Label logging-span-exporter PRs
+  conditions:
+  - files~=^logging-span-exporter/
+  actions:
+    label:
+      add:
+      - logging-span-exporter
       remove: []
 - name: Label natchez PRs
   conditions:

@@ -22,6 +22,8 @@ ThisBuild / mergifyStewardConfig ~= { _.map {
 }}
 
 lazy val root = tlCrossRootProject.aggregate(
+  core,
+  loggingSpanExporter,
   natchez,
   `aws-xray-id-generator`,
   `dwolla-xray-annotations`,
@@ -31,6 +33,41 @@ lazy val root = tlCrossRootProject.aggregate(
 lazy val catsEffectV = "3.7.1"
 lazy val otelApiV = "1.66.0"
 lazy val otelTraceSdkV = "1.66.0"
+
+lazy val core = crossProject(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("core"))
+  .settings(
+    name := "dwolla-otel-core",
+    description := "Dwolla environment and OpenTelemetry resource attribute names, with no OpenTelemetry dependency",
+  )
+  .jvmSettings(
+    tlVersionIntroduced := List("2.12", "2.13", "3").map(_ -> "0.2.9").toMap,
+  )
+
+lazy val loggingSpanExporter = crossProject(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("logging-span-exporter"))
+  .settings(
+    name := "otel-logging-span-exporter",
+    description := "An OpenTelemetry Java SpanExporter that logs spans as OTLP-shaped JSON through log4cats",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-core" % "2.13.0",
+      "org.typelevel" %%% "cats-effect" % catsEffectV,
+      "org.typelevel" %%% "log4cats-core" % "2.8.0",
+      "org.scala-lang.modules" %%% "scala-collection-compat" % "2.14.0",
+      "io.circe" %%% "circe-literal" % "0.14.16",
+      "org.typelevel" %%% "jawn-parser" % "1.8.0" % Provided,
+      "io.opentelemetry" % "opentelemetry-api" % otelApiV,
+      "io.opentelemetry" % "opentelemetry-sdk-common" % "1.66.0",
+      "io.opentelemetry" % "opentelemetry-sdk-trace" % otelTraceSdkV,
+      // LoggingSpanExporter uses the OTLP proto enum classes shipped (as internal API) in the OTLP exporter
+      "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.66.0",
+    ),
+  )
+  .jvmSettings(
+    tlVersionIntroduced := List("2.12", "2.13", "3").map(_ -> "0.2.9").toMap,
+  )
 
 lazy val natchez = crossProject(JVMPlatform)
   .crossType(CrossType.Pure)
@@ -62,7 +99,7 @@ lazy val natchez = crossProject(JVMPlatform)
       )
     },
   )
-  .dependsOn(`aws-xray-id-generator`)
+  .dependsOn(core, loggingSpanExporter, `aws-xray-id-generator`)
 
 lazy val `aws-xray-id-generator` = crossProject(JVMPlatform)
   .crossType(CrossType.Pure)
