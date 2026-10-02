@@ -33,10 +33,9 @@ class DwollaDefaultsSuite extends ScalaCheckSuite {
     }
   }
 
-  property("the service name and Dwolla's transport and propagation defaults are always set") {
+  property("Dwolla's transport and propagation defaults are always set") {
     Prop.forAll(settings) { s =>
       val properties = DwollaDefaults.properties(s)
-      assertEquals(properties.get("otel.service.name"), Some(s.serviceName))
       assertEquals(properties.get("otel.propagators"), Some("tracecontext,b3multi,xray"))
       assertEquals(properties.get("otel.exporter.otlp.protocol"), Some("grpc"))
       assertEquals(properties.get("otel.exporter.otlp.compression"), Some("gzip"))
@@ -49,6 +48,36 @@ class DwollaDefaultsSuite extends ScalaCheckSuite {
       val keys = DwollaDefaults.properties(s).keySet
       assert(!keys.exists(_.contains("histogram.aggregation")), keys)
       assert(!keys.exists(_.contains("temporality")), keys)
+    }
+  }
+
+  property("properties never include the service name, so OTEL_RESOURCE_ATTRIBUTES can supply it") {
+    Prop.forAll(settings) { s =>
+      assert(!DwollaDefaults.properties(s).contains("otel.service.name"))
+    }
+  }
+
+  private val otherAttributes: Gen[Map[String, String]] =
+    Gen.mapOf(Gen.zip(Gen.identifier.map("attr." + _), Gen.identifier))
+
+  property("the service name is supplied when neither otel.service.name nor a service.name resource attribute is configured") {
+    Prop.forAll(settings, Gen.oneOf(None, Some("")), otherAttributes) { (s, configuredName, attributes) =>
+      assertEquals(DwollaDefaults.serviceName(s, configuredName, attributes), Map("otel.service.name" -> s.serviceName))
+    }
+  }
+
+  property("a configured otel.service.name is left alone") {
+    Prop.forAll(settings, Gen.identifier, otherAttributes) { (s, configuredName, attributes) =>
+      assertEquals(DwollaDefaults.serviceName(s, Some(configuredName), attributes), Map.empty[String, String])
+    }
+  }
+
+  property("a service.name resource attribute is left alone") {
+    Prop.forAll(settings, Gen.oneOf(None, Some("")), otherAttributes, Gen.identifier) { (s, configuredName, attributes, fromAttributes) =>
+      assertEquals(
+        DwollaDefaults.serviceName(s, configuredName, attributes + ("service.name" -> fromAttributes)),
+        Map.empty[String, String],
+      )
     }
   }
 }

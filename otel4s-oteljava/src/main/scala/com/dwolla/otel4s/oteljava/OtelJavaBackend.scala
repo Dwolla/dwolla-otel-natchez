@@ -43,6 +43,13 @@ final class OtelJavaBackend[F[_] : Async : LocalContextProvider : Random] privat
     val withDefaults =
       builder
         .addPropertiesSupplier(() => DwollaDefaults.properties(settings).asJava)
+        .addPropertiesCustomizer { (config: ConfigProperties) =>
+          DwollaDefaults.serviceName(
+            settings,
+            Option(config.getString("otel.service.name")),
+            config.getMap("otel.resource.attributes").asScala.toMap,
+          ).asJava
+        }
         .addResourceCustomizer { (configured: OTResource, _: ConfigProperties) =>
           // configured attributes win: Dwolla's only fill in keys that are missing
           dwollaResource(settings).merge(configured)
@@ -81,7 +88,10 @@ object OtelJavaBackend {
 
   /** OpenTelemetry-Java-only builder options. In implicit scope through the builder's backend type: no import needed. */
   implicit class OtelJavaBuilderOps[F[_], E](private val builder: OtelAtDwollaBuilder[F, OtelJavaBackend[F], E]) extends AnyVal {
-    /** Also register the SDK as `GlobalOpenTelemetry`. Fails at acquisition if something already registered. */
+    /**
+     * Also register the SDK as `GlobalOpenTelemetry`. Acquisition fails if anything already registered one, or
+     * if anything already called `GlobalOpenTelemetry.get()` (which installs a no-op on its first call).
+     */
     def registerGlobally: OtelAtDwollaBuilder[F, OtelJavaBackend[F], E] =
       builder.mapBackend(_.copy(globalRegistration = true))
 

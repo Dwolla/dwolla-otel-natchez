@@ -277,6 +277,35 @@ lazy val otel4sOteljava = crossProject(JVMPlatform)
   .settings(
     name := "dwolla-otel4s-oteljava",
     description := "Configures otel4s on the OpenTelemetry Java SDK with Dwolla's defaults",
+    Test / fork := true,
+    // EnvironmentOverridesSuite and ResourceAttributesServiceNameSuite need real OTEL_* environment variables,
+    // which a running JVM can't set, so each gets its own forked JVM; everything else shares one.
+    Test / testGrouping := {
+      val environmentOverridesName = "com.dwolla.otel4s.oteljava.EnvironmentOverridesSuite"
+      val resourceAttributesName = "com.dwolla.otel4s.oteljava.ResourceAttributesServiceNameSuite"
+      val allTests = (Test / definedTests).value
+      val baseForkOptions = (Test / forkOptions).value
+      def environmentGroup(name: String, suiteName: String, env: Map[String, String]): Tests.Group =
+        Tests.Group(
+          name,
+          allTests.filter(_.name == suiteName),
+          Tests.SubProcess(baseForkOptions.withEnvVars(baseForkOptions.envVars ++ env)),
+        )
+      Seq(
+        Tests.Group(
+          "default",
+          allTests.filterNot(t => Set(environmentOverridesName, resourceAttributesName).contains(t.name)),
+          Tests.SubProcess(baseForkOptions),
+        ),
+        environmentGroup("environment-overrides", environmentOverridesName, Map(
+          "OTEL_SERVICE_NAME" -> "service-from-env",
+          "OTEL_RESOURCE_ATTRIBUTES" -> "deployment.environment.name=env-from-env",
+        )),
+        environmentGroup("resource-attributes-service-name", resourceAttributesName, Map(
+          "OTEL_RESOURCE_ATTRIBUTES" -> "service.name=service-from-resource-attributes",
+        )),
+      ).filter(_.tests.nonEmpty)
+    },
     libraryDependencies ++= {
       if (isOtel4sScalaVersion.value)
         Seq(
