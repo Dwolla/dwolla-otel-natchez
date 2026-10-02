@@ -51,6 +51,16 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite {
     }
   }
 
+  test("production's deployment.environment.name is Production, as in Dwolla's infrastructure") {
+    withRandom { implicit random =>
+      val telemetry = InMemoryTelemetry()
+      finishedSpans(telemetry, telemetry.attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Prod).withTracing).build, "prod-span")
+        .map { spans =>
+          assertEquals(spans.head.getResource.getAttribute(stringKey("deployment.environment.name")), "Production")
+        }
+    }
+  }
+
   test("explicitly configured resource attributes win over Dwolla's, which fill in the rest") {
     withRandom { implicit random =>
       val telemetry = InMemoryTelemetry()

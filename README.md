@@ -26,7 +26,8 @@ object MyApp extends IOApp {
 
 `dwolla-otel4s-oteljava` configures [otel4s](https://typelevel.org/otel4s/) on the OpenTelemetry Java SDK with the
 same Dwolla defaults: X-Ray-compatible trace IDs, W3C + B3 + X-Ray propagation, OTLP/gRPC with gzip, and
-`service.name`, `service.version`, and `deployment.environment.name` resource attributes. Use it *instead of*
+`service.name`, `service.version`, and `deployment.environment.name` resource attributes (the last in Dwolla's
+infrastructure spelling: `Production` for `DwollaEnvironment.Prod`). Use it *instead of*
 `dwolla-otel-natchez` when migrating from natchez to otel4s. Scala 2.13 and 3 only (otel4s doesn't publish for 2.12).
 
 ```scala

@@ -71,7 +71,7 @@ final class OtelJavaBackend[F[_] : Async : LocalContextProvider : Random] privat
     OTResource.create(
       Attributes.builder()
         .put(stringKey(ResourceAttributeNames.serviceVersion), settings.serviceVersion)
-        .put(stringKey(ResourceAttributeNames.deploymentEnvironmentName), settings.environment.name)
+        .put(stringKey(ResourceAttributeNames.deploymentEnvironmentName), settings.environment.deploymentEnvironmentName)
         .build()
     )
 
