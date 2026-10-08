@@ -1,0 +1,7 @@
+# Mechanical moves; run `git config blame.ignoreRevsFile .git-blame-ignore-revs` to skip them locally.
+# GitHub's blame view reads this file automatically.
+
+# refactor: move the natchez module's sources from core/ to natchez/
+e808a8d0bb5529651e5e965de5e32633f61c1534
+# refactor: move DwollaEnvironment and LoggingSpanExporter out of the natchez module
+e8a5f694080f23ca19ca004fc941138b54f364dd

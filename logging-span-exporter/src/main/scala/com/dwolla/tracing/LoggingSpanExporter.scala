@@ -18,7 +18,7 @@ import io.opentelemetry.proto.trace.v1.internal.{Span, Status}
 import java.util
 import scala.jdk.CollectionConverters.*
 
-private[tracing] class LoggingSpanExporter[F[_] : Applicative : Logger](dispatcher: Dispatcher[F]) extends SpanExporter {
+private[dwolla] class LoggingSpanExporter[F[_] : Applicative : Logger](dispatcher: Dispatcher[F]) extends SpanExporter {
   override def `export`(spans: util.Collection[SpanData]): CompletableResultCode =
     dispatcher.unsafeRunSync {
       Logger[F].info {

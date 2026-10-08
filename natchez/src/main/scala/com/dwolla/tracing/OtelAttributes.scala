@@ -18,7 +18,7 @@ import io.opentelemetry.api.common.AttributeKey.stringKey
  * artifacts in tests to confirm that the keys are properly defined.
  */
 private[tracing] object OtelAttributes {
-  private[tracing] val serviceName = stringKey("service.name")
-  private[tracing] val serviceVersion = stringKey("service.version")
-  private[tracing] val deploymentEnvironmentName = stringKey("deployment.environment.name")
+  private[tracing] val serviceName = stringKey(ResourceAttributeNames.serviceName)
+  private[tracing] val serviceVersion = stringKey(ResourceAttributeNames.serviceVersion)
+  private[tracing] val deploymentEnvironmentName = stringKey(ResourceAttributeNames.deploymentEnvironmentName)
 }
