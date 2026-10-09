@@ -18,7 +18,7 @@ import scala.annotation.unused
  */
 package object awsecs {
   implicit class EcsResourceOps[F[_], E](private val builder: OtelAtDwollaBuilder[F, OtelJavaBackend[F], E]) extends AnyVal {
-    /** Add ECS resource attributes to spans, detected once at startup through `client`. */
+    /** Add ECS resource attributes to spans, detected at startup through `client`. */
     def withEcsResource(client: Client[F])(implicit F: Temporal[F], env: Env[F], @unused ev: E <:< Signal.Tracing): OtelAtDwollaBuilder[F, OtelJavaBackend[F], E] =
       OtelJavaBackend.OtelJavaBuilderOps(builder)
         .withSignalResource(new SignalResource[F](EcsResource.detect(client), onTraces = true, onMetrics = false))

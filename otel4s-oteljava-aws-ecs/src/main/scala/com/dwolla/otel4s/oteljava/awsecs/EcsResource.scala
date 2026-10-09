@@ -21,10 +21,10 @@ import org.http4s.client.Client
 import scala.concurrent.duration.*
 import scala.jdk.CollectionConverters.*
 
-object EcsResource {
+private[awsecs] object EcsResource {
   private[awsecs] val timeout: FiniteDuration = 2.seconds
 
-  private val dockerImage = "^([^:@\\s]+(?::\\d+/[^:@\\s]+)?)(?::([^@\\s]+))?(?:@sha256:[\\da-fA-F]+)?$".r
+  private val dockerImage = "^([^:@\\s]+(?::\\d+/[^:@\\s]+)?)(?::([^@\\s]+))?(@sha256:[\\da-fA-F]+)?$".r
 
   // task ARN: arn:<partition>:ecs:<region>:<account>:task/<cluster>/<task-id>
   private final case class TaskArn(partition: String, region: String, account: String, taskId: String)
@@ -76,7 +76,7 @@ object EcsResource {
       "container.image.name" -> image.map(_.group(1)),
     )
     val lists: List[(String, Option[String])] = List(
-      "container.image.tags" -> image.map(m => Option(m.group(2)).getOrElse("latest")),
+      "container.image.tags" -> image.flatMap(m => Option(m.group(2)).orElse(Option.when(m.group(3) == null)("latest"))),
       "aws.log.group.names" -> awslogs.get("awslogs-group"),
       "aws.log.stream.names" -> awslogs.get("awslogs-stream"),
     )
