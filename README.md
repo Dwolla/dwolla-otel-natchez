@@ -26,8 +26,10 @@ object MyApp extends IOApp {
 
 `dwolla-otel4s-oteljava` configures [otel4s](https://typelevel.org/otel4s/) on the OpenTelemetry Java SDK with the
 same Dwolla defaults: X-Ray-compatible trace IDs, W3C + B3 + X-Ray propagation, OTLP/gRPC with gzip, and
-`service.name`, `service.version`, and `deployment.environment.name` resource attributes (the last in Dwolla's
-infrastructure spelling: `Production` for `DwollaEnvironment.Prod`). Use it *instead of*
+`service.name`, `service.version`, `deployment.environment.name` (in Dwolla's infrastructure spelling: `Production`
+for `DwollaEnvironment.Prod`), and `service.instance.id` resource attributes. `service.instance.id` is a random UUID
+for each SDK start, so every running instance writes its own metric streams instead of colliding with its
+siblings'. Use it *instead of*
 `dwolla-otel-natchez` when migrating from natchez to otel4s. Scala 2.13 and 3 only (otel4s doesn't publish for 2.12).
 
 ```scala
@@ -83,8 +85,8 @@ With one signal, `.use { implicit meterProvider => ... }` works on either versio
 
 Every default is an overridable property: any `OTEL_*` environment variable or `otel.*` system property wins.
 `OTEL_SERVICE_NAME` and a `service.name` in `OTEL_RESOURCE_ATTRIBUTES` both override the service name given to the
-builder. `OTEL_RESOURCE_DISABLED_KEYS` can't remove `service.version` or `deployment.environment.name`, which
-Dwolla always merges into the resource.
+builder. `OTEL_RESOURCE_DISABLED_KEYS` can't remove `service.version`, `deployment.environment.name`, or
+`service.instance.id`, which Dwolla always merges into the resource.
 
 Options:
 

@@ -2,6 +2,8 @@ package com.dwolla.otel4s.oteljava
 
 import cats.effect.*
 import cats.effect.std.Random
+import cats.syntax.all.*
+import com.dwolla.otel4s.{OtelAtDwollaBuilder, Signal}
 import com.dwolla.tracing.DwollaEnvironment
 import io.opentelemetry.api.common.AttributeKey.stringKey
 import io.opentelemetry.sdk.metrics.data.MetricDataType
@@ -9,6 +11,8 @@ import io.opentelemetry.sdk.trace.data.SpanData
 import munit.CatsEffectSuite
 import org.typelevel.otel4s.metrics.BucketBoundaries
 import org.typelevel.otel4s.trace.TracerProvider
+
+import java.util.UUID
 
 import scala.jdk.CollectionConverters.*
 
@@ -19,6 +23,20 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite {
   // InMemorySpanExporter discards its spans when the SDK shuts down, so read them before `build`'s Resource closes
   private def finishedSpans(telemetry: InMemoryTelemetry, tracerProvider: Resource[IO, TracerProvider[IO]], spanName: String): IO[List[SpanData]] =
     tracerProvider.use(_.get("test").flatMap(_.span(spanName).use_) >> IO(telemetry.spans.getFinishedSpanItems.asScala.toList))
+
+  private def metricsResourceAttribute(builder: OtelAtDwollaBuilder[IO, OtelJavaBackend[IO], Any with Signal.Metrics], key: String): IO[String] = {
+    val telemetry = InMemoryTelemetry()
+    telemetry.attachTo(builder)
+      .build
+      .use { meterProvider =>
+        meterProvider.get("test").flatMap(_.counter[Long]("test.calls").create.flatMap(_.inc())) >>
+          IO(telemetry.metrics.collectAllMetrics().asScala.toList)
+      }
+      .map { metrics =>
+        val counter = metrics.find(_.getName == "test.calls").getOrElse(fail(s"no test.calls in $metrics"))
+        counter.getResource.getAttribute(stringKey(key))
+      }
+  }
 
   test("spans carry X-Ray-compatible trace IDs whose first 8 hex digits are the epoch seconds") {
     withRandom { implicit random =>
@@ -115,6 +133,41 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite {
           assertEquals(histogram.getType, MetricDataType.HISTOGRAM)
           val boundaries = histogram.getHistogramData.getPoints.asScala.head.getBoundaries.asScala.map(_.doubleValue).toList
           assertEquals(boundaries, List(0.5, 1.0))
+        }
+    }
+  }
+
+  test("metrics carry a random UUIDv4 service.instance.id, so each instance's cumulative streams stay separate") {
+    withRandom { implicit random =>
+      metricsResourceAttribute(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withMetrics, "service.instance.id")
+        .map { instanceId =>
+          assert(instanceId != null, "no service.instance.id on the metrics' resource")
+          assertEquals(UUID.fromString(instanceId).version(), 4)
+        }
+    }
+  }
+
+  test("each SDK start gets its own service.instance.id") {
+    withRandom { implicit random =>
+      val builder = OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withMetrics
+      (metricsResourceAttribute(builder, "service.instance.id"), metricsResourceAttribute(builder, "service.instance.id"))
+        .mapN(assertNotEquals(_, _))
+    }
+  }
+
+  test("a configured service.instance.id wins over Dwolla's") {
+    withRandom { implicit random =>
+      val telemetry = InMemoryTelemetry()
+      finishedSpans(
+        telemetry,
+        telemetry.attachTo(
+          OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing,
+          overrides = Map("otel.resource.attributes" -> "service.instance.id=configured-instance"),
+        ).build,
+        "instance-id-span",
+      )
+        .map { spans =>
+          assertEquals(spans.head.getResource.getAttribute(stringKey("service.instance.id")), "configured-instance")
         }
     }
   }
