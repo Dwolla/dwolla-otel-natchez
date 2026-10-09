@@ -40,7 +40,7 @@ lazy val catsEffectV = "3.7.1"
 
 // Every stable io.opentelemetry artifact is declared at otelV; checkOtelVersions enforces that the
 // resolved classpath agrees, because mixed OTel Java versions fail at runtime (NoClassDefFoundError).
-lazy val otelV = "1.66.0"
+lazy val otelV = "1.67.0"
 // io.opentelemetry.instrumentation, used as both "2.31.1" and "2.31.1-alpha". 2.31.1 is built against
 // OTel 1.65.0; no release built against otelV exists yet.
 lazy val otelInstrumentationV = "2.31.1"
