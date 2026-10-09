@@ -1,6 +1,7 @@
 package com.dwolla.otel4s.oteljava.awsecs
 
 import cats.effect.*
+import cats.effect.std.Env
 import cats.effect.testkit.TestControl
 import cats.syntax.all.*
 import io.opentelemetry.api.common.AttributeKey.{stringArrayKey, stringKey}
@@ -94,9 +95,37 @@ class EcsResourceSuite extends CatsEffectSuite {
     }
   }
 
+  test("an image reference with a digest and no tag reports no container.image.tags") {
+    val digestImage = "111122223333.dkr.ecr.us-west-2.amazonaws.com/curltest@sha256:d691691e9652791a60114e67b365688d20d19940dde7c4736ea30e660d8d3553"
+    val container = ec2Container.replace("111122223333.dkr.ecr.us-west-2.amazonaws.com/curltest:latest", digestImage)
+    assert(container.contains(digestImage))
+    EcsResource.fromMetadataUri(metadataServer(container, ec2Task), metadataUri).map { resource =>
+      assertEquals(attribute(resource, "container.image.name"), "111122223333.dkr.ecr.us-west-2.amazonaws.com/curltest".some)
+      assertEquals(listAttribute(resource, "container.image.tags"), None)
+    }
+  }
+
+  private def envWith(vars: Map[String, String]): Env[IO] = new Env[IO] {
+    def get(name: String): IO[Option[String]] = vars.get(name).pure[IO]
+    def entries: IO[scala.collection.immutable.Iterable[(String, String)]] = vars.toList.pure[IO]
+  }
+
+  private val unreachable: Client[IO] =
+    Client.fromHttpApp(HttpApp[IO](req => IO.raiseError(new AssertionError(s"unexpected request $req"))))
+
   test("without ECS_CONTAINER_METADATA_URI_V4, detection gives the empty resource without calling the client") {
-    assume(sys.env.get("ECS_CONTAINER_METADATA_URI_V4").isEmpty, "this suite's JVM must not set ECS_CONTAINER_METADATA_URI_V4")
-    val unreachable = Client.fromHttpApp(HttpApp[IO](req => IO.raiseError(new AssertionError(s"unexpected request $req"))))
-    EcsResource.detect(unreachable).map(assertEquals(_, OTResource.empty()))
+    EcsResource.detect(unreachable)(implicitly, envWith(Map.empty)).map(assertEquals(_, OTResource.empty()))
+  }
+
+  test("with ECS_CONTAINER_METADATA_URI_V4 set, detection reads the metadata endpoint") {
+    EcsResource.detect(metadataServer(ec2Container, ec2Task))(implicitly, envWith(Map("ECS_CONTAINER_METADATA_URI_V4" -> metadataUri.renderString)))
+      .map(resource => assertEquals(attribute(resource, "aws.ecs.task.id"), "158d1c8083dd49d6b527399fd6414f5c".some))
+  }
+
+  test("a malformed ECS_CONTAINER_METADATA_URI_V4 gives the empty resource without calling the client") {
+    val malformed = "http://[invalid"
+    assert(Uri.fromString(malformed).isLeft)
+    EcsResource.detect(unreachable)(implicitly, envWith(Map("ECS_CONTAINER_METADATA_URI_V4" -> malformed)))
+      .map(assertEquals(_, OTResource.empty()))
   }
 }
