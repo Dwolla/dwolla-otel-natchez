@@ -33,6 +33,7 @@ lazy val root = tlCrossRootProject.aggregate(
   otel4sCommon,
   otel4sOteljava,
   otel4sOteljavaRuntimeMetrics,
+  otel4sOteljavaAwsEcs,
   otel4sOteljavaEndToEnd,
 )
 
@@ -360,6 +361,49 @@ lazy val otel4sOteljavaRuntimeMetrics = crossProject(JVMPlatform)
           "io.opentelemetry" % "opentelemetry-sdk-testing" % otelV % Test,
           "org.scalameta" %%% "munit" % "1.3.6" % Test,
           "org.typelevel" %%% "munit-cats-effect" % "2.2.1" % Test,
+        )
+      else Seq.empty
+    },
+  )
+  .dependsOn(otel4sOteljava % "compile->compile;test->test")
+
+lazy val otel4sOteljavaAwsEcs = crossProject(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("otel4s-oteljava-aws-ecs"))
+  .settings(otel4sModuleSettings)
+  .settings(otelVersionCheckSettings)
+  .settings(
+    name := "dwolla-otel4s-oteljava-aws-ecs",
+    description := "Opt-in ECS resource attributes for dwolla-otel4s-oteljava, detected with a caller-supplied http4s client",
+    tlVersionIntroduced := List("2.12", "2.13", "3").map(_ -> "0.2.10").toMap,
+    Test / fork := true,
+    // EcsBuilderSuite needs ECS_CONTAINER_METADATA_URI_V4 set and EcsResourceSuite needs it unset, which a
+    // running JVM can't change, so EcsBuilderSuite gets its own forked JVM.
+    Test / testGrouping := {
+      val builderSuiteName = "com.dwolla.otel4s.oteljava.awsecs.EcsBuilderSuite"
+      val allTests = (Test / definedTests).value
+      val baseForkOptions = (Test / forkOptions).value
+      Seq(
+        Tests.Group("default", allTests.filterNot(_.name == builderSuiteName), Tests.SubProcess(baseForkOptions)),
+        Tests.Group(
+          "ecs-metadata-uri",
+          allTests.filter(_.name == builderSuiteName),
+          Tests.SubProcess(baseForkOptions.withEnvVars(baseForkOptions.envVars + ("ECS_CONTAINER_METADATA_URI_V4" -> "http://169.254.170.2/v4/container-id"))),
+        ),
+      ).filter(_.tests.nonEmpty)
+    },
+    libraryDependencies ++= {
+      if (isOtel4sScalaVersion.value)
+        Seq(
+          "org.http4s" %%% "http4s-client" % "0.23.38",
+          "org.http4s" %%% "http4s-circe" % "0.23.38",
+          "io.circe" %%% "circe-core" % "0.14.17",
+          "io.circe" %%% "circe-parser" % "0.14.17",
+          "io.opentelemetry" % "opentelemetry-sdk-testing" % otelV % Test,
+          "org.http4s" %%% "http4s-dsl" % "0.23.38" % Test,
+          "org.scalameta" %%% "munit" % "1.3.6" % Test,
+          "org.typelevel" %%% "munit-cats-effect" % "2.2.1" % Test,
+          "org.typelevel" %%% "cats-effect-testkit" % catsEffectV % Test,
         )
       else Seq.empty
     },
