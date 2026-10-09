@@ -101,6 +101,33 @@ Options:
 - `.withRuntimeMetrics` (requires `withMetrics`; add `dwolla-otel4s-oteljava-runtime-metrics` and
   `import com.dwolla.otel4s.oteljava.runtimemetrics._`): JVM runtime metrics.
 
+### ECS resource attributes
+
+`dwolla-otel4s-oteljava-aws-ecs` adds ECS resource attributes (`aws.ecs.task.arn`, `aws.ecs.task.id`,
+`aws.ecs.cluster.arn`, `cloud.*`, `container.*`, and, with the `awslogs` driver, `aws.log.*`) detected from the ECS
+task metadata endpoint at startup, through an http4s `Client[F]` you supply:
+
+```scala
+libraryDependencies += "com.dwolla" %% "dwolla-otel4s-oteljava-aws-ecs" % "<version>"
+```
+
+```scala
+import com.dwolla.otel4s.oteljava.awsecs._
+
+OtelJavaAtDwolla[IO]("foo-service", BuildInfo.version, env)
+  .withTracing
+  .withEcsResource(httpClient)
+  .build
+```
+
+Detection never fails startup. Outside ECS, or if the endpoint errors or takes more than 2 seconds, it adds
+nothing. Configured `OTEL_RESOURCE_ATTRIBUTES` win, and `OTEL_RESOURCE_DISABLED_KEYS` removes detected keys.
+
+`withEcsResource` adds the attributes to spans only. `.withEcsResourceOnMetrics(httpClient)` also adds them to
+metrics, but every resource attribute is sent with every metric data point. With CloudWatch metrics, which bill
+OTLP ingestion by the byte, that adds cost for little value, since `service.instance.id` already keeps each
+instance's series apart.
+
 ### Keep OpenTelemetry Java on one version
 
 Mixing OpenTelemetry Java versions on one classpath fails at runtime with `NoClassDefFoundError`. This library's
