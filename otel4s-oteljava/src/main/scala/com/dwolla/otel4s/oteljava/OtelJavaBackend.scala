@@ -1,7 +1,7 @@
 package com.dwolla.otel4s.oteljava
 
 import cats.effect.*
-import cats.effect.std.{Dispatcher, Random}
+import cats.effect.std.{Dispatcher, Random, SecureRandom, UUIDGen}
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
 import com.dwolla.otel4s.*
@@ -20,6 +20,7 @@ import org.typelevel.otel4s.oteljava.OtelJava
 import org.typelevel.otel4s.oteljava.context.LocalContextProvider
 import org.typelevel.otel4s.trace.TracerProvider
 
+import java.util.UUID
 import scala.jdk.CollectionConverters.*
 
 /** Starts an OpenTelemetry Java SDK through `OtelJava.autoConfigured`. */
@@ -33,12 +34,15 @@ final class OtelJavaBackend[F[_] : Async : LocalContextProvider : Random] privat
     for {
       dispatcher <- Dispatcher.parallel[F](await = true)
       spanLogger <- settings.spanLogging.traverse(_.fromName("com.dwolla.otel4s.oteljava.LoggedSpans").toResource)
-      otelJava <- OtelJava.autoConfigured[F](configure(settings, dispatcher, spanLogger))
+      instanceId <- SecureRandom.javaSecuritySecureRandom[F].flatMap { implicit secureRandom =>
+        UUIDGen.fromSecureRandom[F].randomUUID
+      }.toResource
+      otelJava <- OtelJava.autoConfigured[F](configure(settings, instanceId, dispatcher, spanLogger))
       // acquired after the SDK, so released before it shuts down
       _ <- startupHooks.traverse_(_(otelJava.underlying))
     } yield (otelJava.tracerProvider, otelJava.meterProvider)
 
-  private def configure(settings: OtelAtDwollaSettings[F], dispatcher: Dispatcher[F], spanLogger: Option[Logger[F]])
+  private def configure(settings: OtelAtDwollaSettings[F], instanceId: UUID, dispatcher: Dispatcher[F], spanLogger: Option[Logger[F]])
                        (builder: AutoConfiguredOpenTelemetrySdkBuilder): AutoConfiguredOpenTelemetrySdkBuilder = {
     val withDefaults =
       builder
@@ -52,7 +56,7 @@ final class OtelJavaBackend[F[_] : Async : LocalContextProvider : Random] privat
         }
         .addResourceCustomizer { (configured: OTResource, _: ConfigProperties) =>
           // configured attributes win: Dwolla's only fill in keys that are missing
-          dwollaResource(settings).merge(configured)
+          dwollaResource(settings, instanceId).merge(configured)
         }
     val withTracing =
       if (settings.tracingEnabled)
@@ -67,10 +71,13 @@ final class OtelJavaBackend[F[_] : Async : LocalContextProvider : Random] privat
     autoConfigureCustomizers.foldLeft(withRegistration)((b, customize) => customize(b))
   }
 
-  private def dwollaResource(settings: OtelAtDwollaSettings[F]): OTResource =
+  // a random UUIDv4 per SDK start, as semantic conventions recommend: without one, every instance of a service
+  // writes the same cumulative metric streams
+  private def dwollaResource(settings: OtelAtDwollaSettings[F], instanceId: UUID): OTResource =
     OTResource.create(
       Attributes.builder()
         .put(stringKey(ResourceAttributeNames.serviceVersion), settings.serviceVersion)
+        .put(stringKey(ResourceAttributeNames.serviceInstanceId), instanceId.toString)
         .put(stringKey(ResourceAttributeNames.deploymentEnvironmentName), settings.environment.deploymentEnvironmentName)
         .build()
     )

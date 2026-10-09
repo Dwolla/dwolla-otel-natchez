@@ -8,5 +8,6 @@ package com.dwolla.tracing
 private[dwolla] object ResourceAttributeNames {
   val serviceName = "service.name"
   val serviceVersion = "service.version"
+  val serviceInstanceId = "service.instance.id"
   val deploymentEnvironmentName = "deployment.environment.name"
 }
