@@ -6,6 +6,8 @@ import cats.syntax.all.*
 import com.dwolla.otel4s.{OtelAtDwollaBuilder, Signal}
 import com.dwolla.tracing.DwollaEnvironment
 import io.opentelemetry.api.common.AttributeKey.stringKey
+import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.sdk.resources.Resource as OTResource
 import io.opentelemetry.sdk.metrics.data.MetricDataType
 import io.opentelemetry.sdk.trace.data.SpanData
 import munit.CatsEffectSuite
@@ -169,6 +171,66 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite {
         .map { spans =>
           assertEquals(spans.head.getResource.getAttribute(stringKey("service.instance.id")), "configured-instance")
         }
+    }
+  }
+
+  private val detected: OTResource =
+    OTResource.create(Attributes.builder().put("cloud.region", "detected-region").put("aws.ecs.task.id", "detected-task").build())
+
+  private def spanAndMetricResources(builder: OtelAtDwollaBuilder[IO, OtelJavaBackend[IO], Any with Signal.Tracing with Signal.Metrics],
+                                     telemetry: InMemoryTelemetry): IO[(OTResource, OTResource)] =
+    builder.build.use { case (tracerProvider, meterProvider) =>
+      tracerProvider.get("test").flatMap(_.span("signal-resource-span").use_) >>
+        meterProvider.get("test").flatMap(_.counter[Long]("test.calls").create.flatMap(_.inc())) >>
+        IO {
+          val span = telemetry.spans.getFinishedSpanItems.asScala.head
+          val metric = telemetry.metrics.collectAllMetrics().asScala.find(_.getName == "test.calls").get
+          (span.getResource, metric.getResource)
+        }
+    }
+
+  test("a traces-only signal resource reaches spans but not metrics") {
+    withRandom { implicit random =>
+      val telemetry = InMemoryTelemetry()
+      val builder = OtelJavaBackend.OtelJavaBuilderOps(
+        telemetry.attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics)
+      ).withSignalResource(new SignalResource[IO](detected.pure[IO], onTraces = true, onMetrics = false))
+      spanAndMetricResources(builder, telemetry).map { case (spanResource, metricResource) =>
+        assertEquals(spanResource.getAttribute(stringKey("aws.ecs.task.id")), "detected-task")
+        assertEquals(metricResource.getAttribute(stringKey("aws.ecs.task.id")), null)
+      }
+    }
+  }
+
+  test("a metrics signal resource reaches metrics") {
+    withRandom { implicit random =>
+      val telemetry = InMemoryTelemetry()
+      val builder = OtelJavaBackend.OtelJavaBuilderOps(
+        telemetry.attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics)
+      ).withSignalResource(new SignalResource[IO](detected.pure[IO], onTraces = false, onMetrics = true))
+      spanAndMetricResources(builder, telemetry).map { case (spanResource, metricResource) =>
+        assertEquals(spanResource.getAttribute(stringKey("aws.ecs.task.id")), null)
+        assertEquals(metricResource.getAttribute(stringKey("aws.ecs.task.id")), "detected-task")
+      }
+    }
+  }
+
+  test("configured keys win over a signal resource, and disabled keys stay off") {
+    withRandom { implicit random =>
+      val telemetry = InMemoryTelemetry()
+      val builder = OtelJavaBackend.OtelJavaBuilderOps(
+        telemetry.attachTo(
+          OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics,
+          overrides = Map(
+            "otel.resource.attributes" -> "cloud.region=configured-region",
+            "otel.resource.disabled.keys" -> "aws.ecs.task.id",
+          ),
+        )
+      ).withSignalResource(new SignalResource[IO](detected.pure[IO], onTraces = true, onMetrics = false))
+      spanAndMetricResources(builder, telemetry).map { case (spanResource, _) =>
+        assertEquals(spanResource.getAttribute(stringKey("cloud.region")), "configured-region")
+        assertEquals(spanResource.getAttribute(stringKey("aws.ecs.task.id")), null)
+      }
     }
   }
 }
