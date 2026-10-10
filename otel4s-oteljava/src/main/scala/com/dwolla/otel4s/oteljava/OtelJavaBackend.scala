@@ -21,6 +21,7 @@ import org.typelevel.otel4s.oteljava.OtelJava
 import org.typelevel.otel4s.oteljava.context.LocalContextProvider
 import org.typelevel.otel4s.trace.TracerProvider
 
+import scala.annotation.unused
 import scala.jdk.CollectionConverters.*
 
 /** Starts an OpenTelemetry Java SDK through `OtelJava.autoConfigured`. */
@@ -86,7 +87,8 @@ final class OtelJavaBackend[F[_] : Async : LocalContextProvider : Random] privat
         .build()
     )
 
-  // detected attributes only fill in: configured and disabled keys keep their configured meaning
+  // detected attributes override Dwolla's and other detected ones, except keys the application configured or
+  // disabled: those keep their configured meaning
   private def withoutConfiguredKeys(detected: OTResource, config: ConfigProperties): OTResource = {
     val configuredKeys =
       config.getMap("otel.resource.attributes").asScala.keySet ++ config.getList("otel.resource.disabled.keys").asScala
@@ -121,7 +123,17 @@ object OtelJavaBackend {
     private[otel4s] def withAutoConfigureCustomizer(customize: AutoConfiguredOpenTelemetrySdkBuilder => AutoConfiguredOpenTelemetrySdkBuilder): OtelAtDwollaBuilder[F, OtelJavaBackend[F], E] =
       builder.mapBackend(b => b.copy(autoConfigureCustomizers = b.autoConfigureCustomizers :+ customize))
 
-    private[otel4s] def withSignalResource(resource: SignalResource[F]): OtelAtDwollaBuilder[F, OtelJavaBackend[F], E] =
-      builder.mapBackend(b => b.copy(signalResources = b.signalResources :+ resource))
+    /**
+     * Add `detect`'s resource to spans. It runs once, before the SDK starts. Its attributes override Dwolla's
+     * and other detected resource attributes, but not keys configured in `otel.resource.attributes` (e.g.
+     * `OTEL_RESOURCE_ATTRIBUTES`) or removed by `otel.resource.disabled.keys`. If `detect` fails, `build` fails;
+     * handle errors in `detect` to make detection optional.
+     */
+    def withResourceOnTraces(detect: F[OTResource])(implicit @unused ev: E <:< Signal.Tracing): OtelAtDwollaBuilder[F, OtelJavaBackend[F], E] =
+      builder.mapBackend(b => b.copy(signalResources = b.signalResources :+ new SignalResource[F](detect, onTraces = true, onMetrics = false)))
+
+    /** As [[withResourceOnTraces]], for metrics. Every resource attribute is sent with every metric data point. */
+    def withResourceOnMetrics(detect: F[OTResource])(implicit @unused ev: E <:< Signal.Metrics): OtelAtDwollaBuilder[F, OtelJavaBackend[F], E] =
+      builder.mapBackend(b => b.copy(signalResources = b.signalResources :+ new SignalResource[F](detect, onTraces = false, onMetrics = true)))
   }
 }

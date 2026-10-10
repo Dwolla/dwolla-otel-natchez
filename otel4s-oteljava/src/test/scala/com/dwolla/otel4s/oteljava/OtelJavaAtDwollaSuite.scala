@@ -198,12 +198,12 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite {
         }
     }
 
-  test("a traces-only signal resource reaches spans but not metrics") {
+  test("a traces resource reaches spans but not metrics") {
     withRandom { implicit random =>
       val telemetry = InMemoryTelemetry()
       val builder = OtelJavaBackend.OtelJavaBuilderOps(
         telemetry.attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics)
-      ).withSignalResource(new SignalResource[IO](detected.pure[IO], onTraces = true, onMetrics = false))
+      ).withResourceOnTraces(detected.pure[IO])
       spanAndMetricResources(builder, telemetry).map { case (spanResource, metricResource) =>
         assertEquals(spanResource.getAttribute(stringKey("aws.ecs.task.id")), "detected-task")
         assertEquals(metricResource.getAttribute(stringKey("aws.ecs.task.id")), null)
@@ -211,12 +211,12 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite {
     }
   }
 
-  test("a metrics signal resource reaches metrics") {
+  test("a metrics resource reaches metrics but not spans") {
     withRandom { implicit random =>
       val telemetry = InMemoryTelemetry()
       val builder = OtelJavaBackend.OtelJavaBuilderOps(
         telemetry.attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics)
-      ).withSignalResource(new SignalResource[IO](detected.pure[IO], onTraces = false, onMetrics = true))
+      ).withResourceOnMetrics(detected.pure[IO])
       spanAndMetricResources(builder, telemetry).map { case (spanResource, metricResource) =>
         assertEquals(spanResource.getAttribute(stringKey("aws.ecs.task.id")), null)
         assertEquals(metricResource.getAttribute(stringKey("aws.ecs.task.id")), "detected-task")
@@ -224,7 +224,7 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite {
     }
   }
 
-  test("configured keys win over a signal resource, and disabled keys stay off") {
+  test("configured keys win over a traces resource, and disabled keys stay off") {
     withRandom { implicit random =>
       val telemetry = InMemoryTelemetry()
       val builder = OtelJavaBackend.OtelJavaBuilderOps(
@@ -235,10 +235,42 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite {
             "otel.resource.disabled.keys" -> "aws.ecs.task.id",
           ),
         )
-      ).withSignalResource(new SignalResource[IO](detected.pure[IO], onTraces = true, onMetrics = false))
+      ).withResourceOnTraces(detected.pure[IO])
       spanAndMetricResources(builder, telemetry).map { case (spanResource, _) =>
         assertEquals(spanResource.getAttribute(stringKey("cloud.region")), "configured-region")
         assertEquals(spanResource.getAttribute(stringKey("aws.ecs.task.id")), null)
+      }
+    }
+  }
+
+  test("configured keys win over a metrics resource, and disabled keys stay off") {
+    withRandom { implicit random =>
+      val telemetry = InMemoryTelemetry()
+      val builder = OtelJavaBackend.OtelJavaBuilderOps(
+        telemetry.attachTo(
+          OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics,
+          overrides = Map(
+            "otel.resource.attributes" -> "cloud.region=configured-region",
+            "otel.resource.disabled.keys" -> "aws.ecs.task.id",
+          ),
+        )
+      ).withResourceOnMetrics(detected.pure[IO])
+      spanAndMetricResources(builder, telemetry).map { case (_, metricResource) =>
+        assertEquals(metricResource.getAttribute(stringKey("cloud.region")), "configured-region")
+        assertEquals(metricResource.getAttribute(stringKey("aws.ecs.task.id")), null)
+      }
+    }
+  }
+
+  test("a resource whose detection fails fails build") {
+    withRandom { implicit random =>
+      val telemetry = InMemoryTelemetry()
+      val builder = OtelJavaBackend.OtelJavaBuilderOps(
+        telemetry.attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics)
+      ).withResourceOnTraces(IO.raiseError[OTResource](new RuntimeException("boom")))
+      builder.build.use_.attempt.map {
+        case Left(e) => assertEquals(e.getMessage, "boom")
+        case Right(_) => fail("expected build to fail")
       }
     }
   }
