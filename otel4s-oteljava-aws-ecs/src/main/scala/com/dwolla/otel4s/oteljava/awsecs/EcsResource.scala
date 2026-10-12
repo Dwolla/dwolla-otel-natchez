@@ -17,6 +17,7 @@ import io.opentelemetry.sdk.resources.Resource as OTResource
 import org.http4s.Uri
 import org.http4s.circe.CirceEntityDecoder.*
 import org.http4s.client.Client
+import org.typelevel.log4cats.LoggerFactory
 
 import scala.concurrent.duration.*
 import scala.jdk.CollectionConverters.*
@@ -24,7 +25,7 @@ import scala.jdk.CollectionConverters.*
 private[awsecs] object EcsResource {
   private[awsecs] val timeout: FiniteDuration = 2.seconds
 
-  private val dockerImage = "^([^:@\\s]+(?::\\d+/[^:@\\s]+)?)(?::([^@\\s]+))?(@sha256:[\\da-fA-F]+)?$".r
+  private val dockerImage = "^([^:@\\s]+(?::\\d+/[^:@\\s]+)?)(?::([^@\\s]+))?(@[A-Za-z0-9_+.-]+:[A-Fa-f0-9]+)?$".r
 
   // task ARN: arn:<partition>:ecs:<region>:<account>:task/<cluster>/<task-id>
   private final case class TaskArn(partition: String, region: String, account: String, taskId: String)
@@ -35,19 +36,26 @@ private[awsecs] object EcsResource {
       case _ => None
     }
 
-  /** Detects from `ECS_CONTAINER_METADATA_URI_V4`; the empty resource when it is unset or detection fails. */
-  private[awsecs] def detect[F[_] : Temporal : Env](client: Client[F]): F[OTResource] =
+  /**
+   * Detects from `ECS_CONTAINER_METADATA_URI_V4`; the empty resource when it is unset or malformed (nothing went
+   * wrong in ECS, so nothing is logged), or, with one WARN, when detection fails.
+   */
+  private[awsecs] def detect[F[_] : Temporal : Env : LoggerFactory](client: Client[F]): F[OTResource] =
     Env[F].get("ECS_CONTAINER_METADATA_URI_V4").flatMap {
       _.flatMap(Uri.fromString(_).toOption)
         .fold(OTResource.empty().pure[F])(fromMetadataUri(client, _))
     }
 
-  private[awsecs] def fromMetadataUri[F[_] : Temporal](client: Client[F], containerMetadataUri: Uri): F[OTResource] =
+  private[awsecs] def fromMetadataUri[F[_] : Temporal : LoggerFactory](client: Client[F], containerMetadataUri: Uri): F[OTResource] =
     (client.expect[EcsContainerMetadata](containerMetadataUri), client.expect[EcsTaskMetadata](containerMetadataUri / "task"))
       .parTupled
       .map((toResource _).tupled)
       .timeout(timeout)
-      .handleError(_ => OTResource.empty())
+      .handleErrorWith { t =>
+        LoggerFactory[F].getLoggerFromName("com.dwolla.otel4s.oteljava.awsecs.EcsResource")
+          .warn(t)(s"ECS resource detection from $containerMetadataUri failed; continuing without ECS resource attributes")
+          .as(OTResource.empty())
+      }
 
   private def toResource(container: EcsContainerMetadata, task: EcsTaskMetadata): OTResource = {
     val arn = parseTaskArn(task.taskArn)

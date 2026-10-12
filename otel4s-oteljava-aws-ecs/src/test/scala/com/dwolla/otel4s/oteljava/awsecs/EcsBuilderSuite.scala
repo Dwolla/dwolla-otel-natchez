@@ -1,7 +1,7 @@
 package com.dwolla.otel4s.oteljava.awsecs
 
 import cats.effect.*
-import cats.effect.std.Random
+import cats.effect.std.{Env, Random}
 import cats.syntax.all.*
 import com.dwolla.otel4s.oteljava.{InMemoryTelemetry, OtelJavaAtDwolla}
 import com.dwolla.tracing.DwollaEnvironment
@@ -12,12 +12,23 @@ import org.http4s.*
 import org.http4s.client.Client
 import org.http4s.dsl.io.*
 import org.http4s.implicits.*
+import org.typelevel.log4cats.LoggerFactory
+import org.typelevel.log4cats.noop.NoOpFactory
 
 import scala.jdk.CollectionConverters.*
 
-/** Runs in its own forked JVM with ECS_CONTAINER_METADATA_URI_V4 set (build.sbt testGrouping). */
 class EcsBuilderSuite extends CatsEffectSuite {
   import EcsMetadataFixtures.*
+
+  private val metadataUri = "http://169.254.170.2/v4/container-id"
+
+  private implicit val env: Env[IO] = new Env[IO] {
+    def get(name: String): IO[Option[String]] = entries.map(_.toMap.get(name))
+    def entries: IO[scala.collection.immutable.Iterable[(String, String)]] =
+      List("ECS_CONTAINER_METADATA_URI_V4" -> metadataUri).pure[IO]
+  }
+
+  private implicit val loggerFactory: LoggerFactory[IO] = NoOpFactory[IO]
 
   private val metadataServer: Client[IO] =
     Client.fromHttpApp(HttpRoutes.of[IO] {
@@ -40,10 +51,6 @@ class EcsBuilderSuite extends CatsEffectSuite {
     }
 
   private val taskId = "158d1c8083dd49d6b527399fd6414f5c"
-
-  test("the ECS metadata URI is set in this JVM") {
-    assertEquals(sys.env.get("ECS_CONTAINER_METADATA_URI_V4"), "http://169.254.170.2/v4/container-id".some)
-  }
 
   test("withEcsResource puts the ECS attributes on spans only") {
     withRandom { implicit random =>

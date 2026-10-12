@@ -11,6 +11,8 @@ import org.http4s.*
 import org.http4s.client.Client
 import org.http4s.dsl.io.*
 import org.http4s.implicits.*
+import org.typelevel.log4cats.LoggerFactory
+import org.typelevel.log4cats.testing.TestingLoggerFactory
 
 import scala.jdk.CollectionConverters.*
 
@@ -25,12 +27,34 @@ class EcsResourceSuite extends CatsEffectSuite {
       case GET -> Root / "v4" / "container-id" / "task" => Ok(task)
     }.orNotFound)
 
+  private val loggerName = "com.dwolla.otel4s.oteljava.awsecs.EcsResource"
+
+  private def failureMessage(uri: Uri): String =
+    s"ECS resource detection from $uri failed; continuing without ECS resource attributes"
+
+  private def withLogs[A](run: LoggerFactory[IO] => IO[A]): IO[(A, Vector[TestingLoggerFactory.LogMessage])] = {
+    val factory = TestingLoggerFactory.atomic[IO]()
+    run(factory).flatMap(a => factory.logged.map(a -> _))
+  }
+
+  private def assertOneDetectionWarning(logged: Vector[TestingLoggerFactory.LogMessage]): Unit =
+    logged match {
+      case Vector(TestingLoggerFactory.Warn(name, message, throwable, _)) =>
+        assertEquals(name, loggerName)
+        assertEquals(message, failureMessage(metadataUri))
+        assert(throwable.isDefined, "the WARN entry should carry the throwable")
+      case other => fail(s"expected exactly one WARN entry, got $other")
+    }
+
+  private def fromMetadataUri(client: Client[IO]): IO[OTResource] =
+    EcsResource.fromMetadataUri(client, metadataUri)(implicitly, org.typelevel.log4cats.noop.NoOpFactory[IO])
+
   private def attribute(resource: OTResource, key: String): Option[String] = Option(resource.getAttribute(stringKey(key)))
   private def listAttribute(resource: OTResource, key: String): Option[List[String]] =
     Option(resource.getAttribute(stringArrayKey(key))).map(_.asScala.toList)
 
   test("an EC2 response without AvailabilityZone and with a short cluster name gives the attributes that are present") {
-    EcsResource.fromMetadataUri(metadataServer(ec2Container, ec2Task), metadataUri).map { resource =>
+    fromMetadataUri(metadataServer(ec2Container, ec2Task)).map { resource =>
       assertEquals(attribute(resource, "cloud.provider"), "aws".some)
       assertEquals(attribute(resource, "cloud.platform"), "aws_ecs".some)
       assertEquals(attribute(resource, "cloud.region"), "us-west-2".some)
@@ -54,7 +78,7 @@ class EcsResourceSuite extends CatsEffectSuite {
   }
 
   test("a Fargate response keeps its cluster ARN and availability zone") {
-    EcsResource.fromMetadataUri(metadataServer(fargateContainer, fargateTask), metadataUri).map { resource =>
+    fromMetadataUri(metadataServer(fargateContainer, fargateTask)).map { resource =>
       assertEquals(attribute(resource, "aws.ecs.cluster.arn"), "arn:aws:ecs:us-west-2:111122223333:cluster/default".some)
       assertEquals(attribute(resource, "cloud.availability_zone"), "us-west-2d".some)
       assertEquals(attribute(resource, "aws.ecs.launchtype"), "fargate".some)
@@ -63,35 +87,41 @@ class EcsResourceSuite extends CatsEffectSuite {
   }
 
   test("non-awslogs log drivers add no aws.log attributes") {
-    EcsResource.fromMetadataUri(metadataServer(fargateContainer, fargateTask), metadataUri).map { resource =>
+    fromMetadataUri(metadataServer(fargateContainer, fargateTask)).map { resource =>
       assertEquals(listAttribute(resource, "aws.log.group.names"), None)
       assertEquals(listAttribute(resource, "aws.log.stream.names"), None)
     }
   }
 
   test("an old agent's response without LaunchType, logs, or ContainerARN still gives the task attributes") {
-    EcsResource.fromMetadataUri(metadataServer(minimalContainer, minimalTask), metadataUri).map { resource =>
+    fromMetadataUri(metadataServer(minimalContainer, minimalTask)).map { resource =>
       assertEquals(attribute(resource, "aws.ecs.task.id"), "0123".some)
       assertEquals(attribute(resource, "aws.ecs.launchtype"), None)
       assertEquals(attribute(resource, "aws.ecs.container.arn"), None)
     }
   }
 
-  test("an HTTP error gives the empty resource") {
+  test("an HTTP error gives the empty resource and logs one WARN") {
     val failing = Client.fromHttpApp(HttpApp[IO](_ => InternalServerError()))
-    EcsResource.fromMetadataUri(failing, metadataUri).map(assertEquals(_, OTResource.empty()))
+    withLogs(implicit lf => EcsResource.fromMetadataUri(failing, metadataUri)).map { case (resource, logged) =>
+      assertEquals(resource, OTResource.empty())
+      assertOneDetectionWarning(logged)
+    }
   }
 
-  test("an undecodable response gives the empty resource") {
-    EcsResource.fromMetadataUri(metadataServer("""{"unexpected": true}""", ec2Task), metadataUri)
-      .map(assertEquals(_, OTResource.empty()))
+  test("an undecodable response gives the empty resource and logs one WARN") {
+    withLogs(implicit lf => EcsResource.fromMetadataUri(metadataServer("""{"unexpected": true}""", ec2Task), metadataUri)).map { case (resource, logged) =>
+      assertEquals(resource, OTResource.empty())
+      assertOneDetectionWarning(logged)
+    }
   }
 
-  test("a hanging endpoint gives the empty resource after the timeout") {
+  test("a hanging endpoint gives the empty resource after the timeout and logs one WARN") {
     val hanging = Client.fromHttpApp(HttpApp[IO](_ => IO.never))
-    TestControl.executeEmbed(EcsResource.fromMetadataUri(hanging, metadataUri).timed).map { case (elapsed, resource) =>
+    TestControl.executeEmbed(withLogs(implicit lf => EcsResource.fromMetadataUri(hanging, metadataUri).timed)).map { case ((elapsed, resource), logged) =>
       assertEquals(resource, OTResource.empty())
       assertEquals(elapsed, EcsResource.timeout)
+      assertOneDetectionWarning(logged)
     }
   }
 
@@ -99,7 +129,17 @@ class EcsResourceSuite extends CatsEffectSuite {
     val digestImage = "111122223333.dkr.ecr.us-west-2.amazonaws.com/curltest@sha256:d691691e9652791a60114e67b365688d20d19940dde7c4736ea30e660d8d3553"
     val container = ec2Container.replace("111122223333.dkr.ecr.us-west-2.amazonaws.com/curltest:latest", digestImage)
     assert(container.contains(digestImage))
-    EcsResource.fromMetadataUri(metadataServer(container, ec2Task), metadataUri).map { resource =>
+    fromMetadataUri(metadataServer(container, ec2Task)).map { resource =>
+      assertEquals(attribute(resource, "container.image.name"), "111122223333.dkr.ecr.us-west-2.amazonaws.com/curltest".some)
+      assertEquals(listAttribute(resource, "container.image.tags"), None)
+    }
+  }
+
+  test("an image reference with a sha512 digest and no tag keeps the repository name and reports no container.image.tags") {
+    val digestImage = s"111122223333.dkr.ecr.us-west-2.amazonaws.com/curltest@sha512:${"ab12" * 32}"
+    val container = ec2Container.replace("111122223333.dkr.ecr.us-west-2.amazonaws.com/curltest:latest", digestImage)
+    assert(container.contains(digestImage))
+    fromMetadataUri(metadataServer(container, ec2Task)).map { resource =>
       assertEquals(attribute(resource, "container.image.name"), "111122223333.dkr.ecr.us-west-2.amazonaws.com/curltest".some)
       assertEquals(listAttribute(resource, "container.image.tags"), None)
     }
@@ -114,18 +154,25 @@ class EcsResourceSuite extends CatsEffectSuite {
     Client.fromHttpApp(HttpApp[IO](req => IO.raiseError(new AssertionError(s"unexpected request $req"))))
 
   test("without ECS_CONTAINER_METADATA_URI_V4, detection gives the empty resource without calling the client") {
-    EcsResource.detect(unreachable)(implicitly, envWith(Map.empty)).map(assertEquals(_, OTResource.empty()))
+    withLogs(implicit lf => EcsResource.detect(unreachable)(implicitly, envWith(Map.empty), lf)).map { case (resource, logged) =>
+      assertEquals(resource, OTResource.empty())
+      assertEquals(logged, Vector.empty)
+    }
   }
 
   test("with ECS_CONTAINER_METADATA_URI_V4 set, detection reads the metadata endpoint") {
-    EcsResource.detect(metadataServer(ec2Container, ec2Task))(implicitly, envWith(Map("ECS_CONTAINER_METADATA_URI_V4" -> metadataUri.renderString)))
-      .map(resource => assertEquals(attribute(resource, "aws.ecs.task.id"), "158d1c8083dd49d6b527399fd6414f5c".some))
+    withLogs(implicit lf => EcsResource.detect(metadataServer(ec2Container, ec2Task))(implicitly, envWith(Map("ECS_CONTAINER_METADATA_URI_V4" -> metadataUri.renderString)), lf)).map { case (resource, logged) =>
+      assertEquals(attribute(resource, "aws.ecs.task.id"), "158d1c8083dd49d6b527399fd6414f5c".some)
+      assertEquals(logged, Vector.empty)
+    }
   }
 
   test("a malformed ECS_CONTAINER_METADATA_URI_V4 gives the empty resource without calling the client") {
     val malformed = "http://[invalid"
     assert(Uri.fromString(malformed).isLeft)
-    EcsResource.detect(unreachable)(implicitly, envWith(Map("ECS_CONTAINER_METADATA_URI_V4" -> malformed)))
-      .map(assertEquals(_, OTResource.empty()))
+    withLogs(implicit lf => EcsResource.detect(unreachable)(implicitly, envWith(Map("ECS_CONTAINER_METADATA_URI_V4" -> malformed)), lf)).map { case (resource, logged) =>
+      assertEquals(resource, OTResource.empty())
+      assertEquals(logged, Vector.empty)
+    }
   }
 }
