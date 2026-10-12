@@ -2,7 +2,6 @@ package com.dwolla.otel4s.oteljava
 
 import cats.effect.*
 import cats.effect.std.Random
-import cats.syntax.all.*
 import com.dwolla.otel4s.{OtelAtDwollaBuilder, Signal}
 import com.dwolla.tracing.DwollaEnvironment
 import io.opentelemetry.api.common.AttributeKey.stringKey
@@ -137,7 +136,7 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite {
     }
   }
 
-  test("metrics carry a random UUIDv4 service.instance.id, so each instance's cumulative streams stay separate") {
+  test("metrics carry the SDK's UUID service.instance.id, so each instance's cumulative streams stay separate") {
     withRandom { implicit random =>
       metricsResourceAttribute(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withMetrics, "service.instance.id")
         .map { instanceId =>
@@ -147,15 +146,7 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite {
     }
   }
 
-  test("each SDK start gets its own service.instance.id") {
-    withRandom { implicit random =>
-      val builder = OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withMetrics
-      (metricsResourceAttribute(builder, "service.instance.id"), metricsResourceAttribute(builder, "service.instance.id"))
-        .mapN(assertNotEquals(_, _))
-    }
-  }
-
-  test("a configured service.instance.id wins over Dwolla's") {
+  test("a configured service.instance.id wins over the SDK's") {
     withRandom { implicit random =>
       val telemetry = InMemoryTelemetry()
       finishedSpans(
@@ -168,6 +159,23 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite {
       )
         .map { spans =>
           assertEquals(spans.head.getResource.getAttribute(stringKey("service.instance.id")), "configured-instance")
+        }
+    }
+  }
+
+  test("OTEL_RESOURCE_DISABLED_KEYS removes the SDK's service.instance.id") {
+    withRandom { implicit random =>
+      val telemetry = InMemoryTelemetry()
+      finishedSpans(
+        telemetry,
+        telemetry.attachTo(
+          OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing,
+          overrides = Map("otel.resource.disabled.keys" -> "service.instance.id"),
+        ).build,
+        "disabled-instance-id-span",
+      )
+        .map { spans =>
+          assertEquals(Option(spans.head.getResource.getAttribute(stringKey("service.instance.id"))), None)
         }
     }
   }
