@@ -129,8 +129,8 @@ logs nothing. Inside ECS, an HTTP error, an undecodable response, or a response 
 nothing and logs one WARN, with the throwable, through your `LoggerFactory`. Each opt-in waits up to 2 seconds for
 the metadata endpoint, so with both, startup can wait up to 4 seconds.
 
-Detected attributes override Dwolla's but not `OTEL_RESOURCE_ATTRIBUTES`, and `OTEL_RESOURCE_DISABLED_KEYS` removes
-them.
+Detected attributes never replace the service name. Otherwise they override Dwolla's but not
+`OTEL_RESOURCE_ATTRIBUTES`, and `OTEL_RESOURCE_DISABLED_KEYS` removes them.
 
 Every resource attribute is sent with every metric data point. With CloudWatch metrics, which bill OTLP ingestion by
 the byte, `withEcsResourceOnMetrics` adds cost for little value, since `service.instance.id` already keeps each

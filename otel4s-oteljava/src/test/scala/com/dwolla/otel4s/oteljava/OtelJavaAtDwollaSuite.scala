@@ -262,6 +262,45 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite {
     }
   }
 
+  private val detectedWithServiceName: OTResource =
+    OTResource.create(Attributes.builder().put("service.name", "detected-service").put("cloud.region", "detected-region").build())
+
+  test("a detected service.name never replaces the builder's service name") {
+    withRandom { implicit random =>
+      val telemetry = InMemoryTelemetry()
+      val builder = OtelJavaBackend.OtelJavaBuilderOps(
+        OtelJavaBackend.OtelJavaBuilderOps(
+          telemetry.attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics)
+        ).withResourceOnTraces(detectedWithServiceName.pure[IO])
+      ).withResourceOnMetrics(detectedWithServiceName.pure[IO])
+      spanAndMetricResources(builder, telemetry).map { case (spanResource, metricResource) =>
+        assertEquals(spanResource.getAttribute(stringKey("service.name")), "foo-service")
+        assertEquals(metricResource.getAttribute(stringKey("service.name")), "foo-service")
+        assertEquals(spanResource.getAttribute(stringKey("cloud.region")), "detected-region")
+        assertEquals(metricResource.getAttribute(stringKey("cloud.region")), "detected-region")
+      }
+    }
+  }
+
+  test("a detected service.name never replaces OTEL_SERVICE_NAME") {
+    withRandom { implicit random =>
+      val telemetry = InMemoryTelemetry()
+      val builder = OtelJavaBackend.OtelJavaBuilderOps(
+        OtelJavaBackend.OtelJavaBuilderOps(
+          telemetry.attachTo(
+            OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics,
+            overrides = Map("otel.service.name" -> "configured-service"),
+          )
+        ).withResourceOnTraces(detectedWithServiceName.pure[IO])
+      ).withResourceOnMetrics(detectedWithServiceName.pure[IO])
+      spanAndMetricResources(builder, telemetry).map { case (spanResource, metricResource) =>
+        assertEquals(spanResource.getAttribute(stringKey("service.name")), "configured-service")
+        assertEquals(metricResource.getAttribute(stringKey("service.name")), "configured-service")
+        assertEquals(spanResource.getAttribute(stringKey("cloud.region")), "detected-region")
+      }
+    }
+  }
+
   test("a resource whose detection fails fails build") {
     withRandom { implicit random =>
       val telemetry = InMemoryTelemetry()

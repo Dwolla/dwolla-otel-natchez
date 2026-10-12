@@ -88,10 +88,13 @@ final class OtelJavaBackend[F[_] : Async : LocalContextProvider : Random] privat
     )
 
   // detected attributes override Dwolla's and other detected ones, except keys the application configured or
-  // disabled: those keep their configured meaning
+  // disabled, and never service.name: those keep their configured meaning
   private def withoutConfiguredKeys(detected: OTResource, config: ConfigProperties): OTResource = {
+    val configuredServiceName = Option(config.getString("otel.service.name")).filter(_.nonEmpty).as("service.name")
     val configuredKeys =
-      config.getMap("otel.resource.attributes").asScala.keySet ++ config.getList("otel.resource.disabled.keys").asScala
+      config.getMap("otel.resource.attributes").asScala.keySet ++
+        config.getList("otel.resource.disabled.keys").asScala ++
+        configuredServiceName
     detected.toBuilder.removeIf(key => configuredKeys.contains(key.getKey)).build()
   }
 
@@ -124,11 +127,10 @@ object OtelJavaBackend {
       builder.mapBackend(b => b.copy(autoConfigureCustomizers = b.autoConfigureCustomizers :+ customize))
 
     /**
-     * Add `detect`'s resource to spans. It runs once, before the SDK starts. Its attributes override Dwolla's
-     * and other detected resource attributes, but not keys configured in `otel.resource.attributes` (e.g.
-     * `OTEL_RESOURCE_ATTRIBUTES`) or removed by `otel.resource.disabled.keys`. Detected attributes therefore
-     * override Dwolla's resource attributes, including `service.name` even when `OTEL_SERVICE_NAME` is set; only
-     * keys in `otel.resource.attributes` and `otel.resource.disabled.keys` win over them. Each call's `detect`
+     * Add `detect`'s resource to spans. It runs once, before the SDK starts. Detected attributes never replace the
+     * service name (from `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES`, or the builder). Otherwise they override
+     * Dwolla's and other detected resource attributes, except keys in `otel.resource.attributes` or removed by
+     * `otel.resource.disabled.keys`. Each call's `detect`
      * runs separately, even when given the same effect. If `detect` fails, `build` fails; handle errors in
      * `detect` to make detection optional.
      */
