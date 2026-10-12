@@ -101,6 +101,41 @@ Options:
 - `.withRuntimeMetrics` (requires `withMetrics`; add `dwolla-otel4s-oteljava-runtime-metrics` and
   `import com.dwolla.otel4s.oteljava.runtimemetrics._`): JVM runtime metrics.
 
+### ECS resource attributes
+
+`dwolla-otel4s-oteljava-aws-ecs` adds ECS resource attributes (`aws.ecs.task.arn`, `aws.ecs.task.id`,
+`aws.ecs.cluster.arn`, `cloud.*`, `container.*`, and, with the `awslogs` driver, `aws.log.*`) detected from the ECS
+task metadata endpoint at startup, through an http4s `Client[F]` you supply:
+
+```scala
+libraryDependencies += "com.dwolla" %% "dwolla-otel4s-oteljava-aws-ecs" % "<version>"
+```
+
+```scala
+import com.dwolla.otel4s.oteljava.awsecs._
+
+// requires an implicit LoggerFactory[IO], such as log4cats-slf4j's Slf4jFactory.create[IO]
+OtelJavaAtDwolla[IO]("foo-service", BuildInfo.version, env)
+  .withTracing
+  .withEcsResource(httpClient)
+  .build
+```
+
+`withEcsResource` adds the attributes to spans only. `.withEcsResourceOnMetrics(httpClient)` adds them to
+metrics; to get both, call both. Both need an implicit log4cats `LoggerFactory[F]` (and an `Env[F]`) in scope.
+
+Detection never fails startup. Outside ECS (`ECS_CONTAINER_METADATA_URI_V4` unset or malformed) it adds nothing and
+logs nothing. Inside ECS, an HTTP error, an undecodable response, or a response that takes more than 2 seconds adds
+nothing and logs one WARN, with the throwable, through your `LoggerFactory`. Each opt-in waits up to 2 seconds for
+the metadata endpoint, so with both, startup can wait up to 4 seconds.
+
+Detected attributes never replace the service name. Otherwise they override Dwolla's but not
+`OTEL_RESOURCE_ATTRIBUTES`, and `OTEL_RESOURCE_DISABLED_KEYS` removes them.
+
+Every resource attribute is sent with every metric data point. With CloudWatch metrics, which bill OTLP ingestion by
+the byte, `withEcsResourceOnMetrics` adds cost for little value, since `service.instance.id` already keeps each
+instance's series apart.
+
 ### Keep OpenTelemetry Java on one version
 
 Mixing OpenTelemetry Java versions on one classpath fails at runtime with `NoClassDefFoundError`. This library's
