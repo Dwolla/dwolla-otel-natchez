@@ -52,8 +52,9 @@ private[awsecs] object EcsResource {
       .map((toResource _).tupled)
       .timeout(timeout)
       .handleErrorWith { t =>
-        LoggerFactory[F].getLoggerFromName("com.dwolla.otel4s.oteljava.awsecs.EcsResource")
-          .warn(t)(s"ECS resource detection from $containerMetadataUri failed; continuing without ECS resource attributes")
+        LoggerFactory[F].fromName("com.dwolla.otel4s.oteljava.awsecs.EcsResource")
+          .flatMap(_.warn(t)(s"ECS resource detection from $containerMetadataUri failed; continuing without ECS resource attributes"))
+          .attempt
           .as(OTResource.empty())
       }
 

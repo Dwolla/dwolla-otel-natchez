@@ -126,8 +126,11 @@ object OtelJavaBackend {
     /**
      * Add `detect`'s resource to spans. It runs once, before the SDK starts. Its attributes override Dwolla's
      * and other detected resource attributes, but not keys configured in `otel.resource.attributes` (e.g.
-     * `OTEL_RESOURCE_ATTRIBUTES`) or removed by `otel.resource.disabled.keys`. If `detect` fails, `build` fails;
-     * handle errors in `detect` to make detection optional.
+     * `OTEL_RESOURCE_ATTRIBUTES`) or removed by `otel.resource.disabled.keys`. Detected attributes therefore
+     * override Dwolla's resource attributes, including `service.name` even when `OTEL_SERVICE_NAME` is set; only
+     * keys in `otel.resource.attributes` and `otel.resource.disabled.keys` win over them. Each call's `detect`
+     * runs separately, even when given the same effect. If `detect` fails, `build` fails; handle errors in
+     * `detect` to make detection optional.
      */
     def withResourceOnTraces(detect: F[OTResource])(implicit @unused ev: E <:< Signal.Tracing): OtelAtDwollaBuilder[F, OtelJavaBackend[F], E] =
       builder.mapBackend(b => b.copy(signalResources = b.signalResources :+ new SignalResource[F](detect, onTraces = true, onMetrics = false)))

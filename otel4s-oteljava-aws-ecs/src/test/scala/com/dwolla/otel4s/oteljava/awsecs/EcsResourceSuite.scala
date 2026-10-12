@@ -11,7 +11,8 @@ import org.http4s.*
 import org.http4s.client.Client
 import org.http4s.dsl.io.*
 import org.http4s.implicits.*
-import org.typelevel.log4cats.LoggerFactory
+import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
+import org.typelevel.log4cats.noop.NoOpFactory
 import org.typelevel.log4cats.testing.TestingLoggerFactory
 
 import scala.jdk.CollectionConverters.*
@@ -46,8 +47,10 @@ class EcsResourceSuite extends CatsEffectSuite {
       case other => fail(s"expected exactly one WARN entry, got $other")
     }
 
+  private implicit val loggerFactory: LoggerFactory[IO] = NoOpFactory[IO]
+
   private def fromMetadataUri(client: Client[IO]): IO[OTResource] =
-    EcsResource.fromMetadataUri(client, metadataUri)(implicitly, org.typelevel.log4cats.noop.NoOpFactory[IO])
+    EcsResource.fromMetadataUri(client, metadataUri)
 
   private def attribute(resource: OTResource, key: String): Option[String] = Option(resource.getAttribute(stringKey(key)))
   private def listAttribute(resource: OTResource, key: String): Option[List[String]] =
@@ -103,14 +106,54 @@ class EcsResourceSuite extends CatsEffectSuite {
 
   test("an HTTP error gives the empty resource and logs one WARN") {
     val failing = Client.fromHttpApp(HttpApp[IO](_ => InternalServerError()))
-    withLogs(implicit lf => EcsResource.fromMetadataUri(failing, metadataUri)).map { case (resource, logged) =>
+    withLogs(lf => EcsResource.fromMetadataUri(failing, metadataUri)(implicitly, lf)).map { case (resource, logged) =>
       assertEquals(resource, OTResource.empty())
       assertOneDetectionWarning(logged)
     }
   }
 
+  test("a logger that fails while reporting a detection failure still gives the empty resource") {
+    val failing = Client.fromHttpApp(HttpApp[IO](_ => InternalServerError()))
+    val loggerDown = IO.raiseError[Unit](new RuntimeException("logger down"))
+    val brokenLogger: SelfAwareStructuredLogger[IO] = new SelfAwareStructuredLogger[IO] {
+      private val noop = NoOpFactory[IO].getLoggerFromName("unused")
+      def isTraceEnabled: IO[Boolean] = noop.isTraceEnabled
+      def isDebugEnabled: IO[Boolean] = noop.isDebugEnabled
+      def isInfoEnabled: IO[Boolean] = noop.isInfoEnabled
+      def isWarnEnabled: IO[Boolean] = noop.isWarnEnabled
+      def isErrorEnabled: IO[Boolean] = noop.isErrorEnabled
+      def trace(ctx: Map[String, String])(msg: => String): IO[Unit] = noop.trace(ctx)(msg)
+      def trace(ctx: Map[String, String], t: Throwable)(msg: => String): IO[Unit] = noop.trace(ctx, t)(msg)
+      def debug(ctx: Map[String, String])(msg: => String): IO[Unit] = noop.debug(ctx)(msg)
+      def debug(ctx: Map[String, String], t: Throwable)(msg: => String): IO[Unit] = noop.debug(ctx, t)(msg)
+      def info(ctx: Map[String, String])(msg: => String): IO[Unit] = noop.info(ctx)(msg)
+      def info(ctx: Map[String, String], t: Throwable)(msg: => String): IO[Unit] = noop.info(ctx, t)(msg)
+      def warn(ctx: Map[String, String])(msg: => String): IO[Unit] = loggerDown
+      def warn(ctx: Map[String, String], t: Throwable)(msg: => String): IO[Unit] = loggerDown
+      def error(ctx: Map[String, String])(msg: => String): IO[Unit] = noop.error(ctx)(msg)
+      def error(ctx: Map[String, String], t: Throwable)(msg: => String): IO[Unit] = noop.error(ctx, t)(msg)
+      def error(t: Throwable)(message: => String): IO[Unit] = noop.error(t)(message)
+      def warn(t: Throwable)(message: => String): IO[Unit] = loggerDown
+      def info(t: Throwable)(message: => String): IO[Unit] = noop.info(t)(message)
+      def debug(t: Throwable)(message: => String): IO[Unit] = noop.debug(t)(message)
+      def trace(t: Throwable)(message: => String): IO[Unit] = noop.trace(t)(message)
+      def error(message: => String): IO[Unit] = noop.error(message)
+      def warn(message: => String): IO[Unit] = loggerDown
+      def info(message: => String): IO[Unit] = noop.info(message)
+      def debug(message: => String): IO[Unit] = noop.debug(message)
+      def trace(message: => String): IO[Unit] = noop.trace(message)
+    }
+    val brokenFactory: LoggerFactory[IO] = new LoggerFactory[IO] {
+      def getLoggerFromName(name: String): SelfAwareStructuredLogger[IO] = brokenLogger
+      def fromName(name: String): IO[SelfAwareStructuredLogger[IO]] = brokenLogger.pure[IO]
+    }
+    EcsResource.fromMetadataUri(failing, metadataUri)(implicitly, brokenFactory).map { resource =>
+      assertEquals(resource, OTResource.empty())
+    }
+  }
+
   test("an undecodable response gives the empty resource and logs one WARN") {
-    withLogs(implicit lf => EcsResource.fromMetadataUri(metadataServer("""{"unexpected": true}""", ec2Task), metadataUri)).map { case (resource, logged) =>
+    withLogs(lf => EcsResource.fromMetadataUri(metadataServer("""{"unexpected": true}""", ec2Task), metadataUri)(implicitly, lf)).map { case (resource, logged) =>
       assertEquals(resource, OTResource.empty())
       assertOneDetectionWarning(logged)
     }
@@ -118,7 +161,7 @@ class EcsResourceSuite extends CatsEffectSuite {
 
   test("a hanging endpoint gives the empty resource after the timeout and logs one WARN") {
     val hanging = Client.fromHttpApp(HttpApp[IO](_ => IO.never))
-    TestControl.executeEmbed(withLogs(implicit lf => EcsResource.fromMetadataUri(hanging, metadataUri).timed)).map { case ((elapsed, resource), logged) =>
+    TestControl.executeEmbed(withLogs(lf => EcsResource.fromMetadataUri(hanging, metadataUri)(implicitly, lf).timed)).map { case ((elapsed, resource), logged) =>
       assertEquals(resource, OTResource.empty())
       assertEquals(elapsed, EcsResource.timeout)
       assertOneDetectionWarning(logged)
@@ -154,14 +197,14 @@ class EcsResourceSuite extends CatsEffectSuite {
     Client.fromHttpApp(HttpApp[IO](req => IO.raiseError(new AssertionError(s"unexpected request $req"))))
 
   test("without ECS_CONTAINER_METADATA_URI_V4, detection gives the empty resource without calling the client") {
-    withLogs(implicit lf => EcsResource.detect(unreachable)(implicitly, envWith(Map.empty), lf)).map { case (resource, logged) =>
+    withLogs(lf => EcsResource.detect(unreachable)(implicitly, envWith(Map.empty), lf)).map { case (resource, logged) =>
       assertEquals(resource, OTResource.empty())
       assertEquals(logged, Vector.empty)
     }
   }
 
   test("with ECS_CONTAINER_METADATA_URI_V4 set, detection reads the metadata endpoint") {
-    withLogs(implicit lf => EcsResource.detect(metadataServer(ec2Container, ec2Task))(implicitly, envWith(Map("ECS_CONTAINER_METADATA_URI_V4" -> metadataUri.renderString)), lf)).map { case (resource, logged) =>
+    withLogs(lf => EcsResource.detect(metadataServer(ec2Container, ec2Task))(implicitly, envWith(Map("ECS_CONTAINER_METADATA_URI_V4" -> metadataUri.renderString)), lf)).map { case (resource, logged) =>
       assertEquals(attribute(resource, "aws.ecs.task.id"), "158d1c8083dd49d6b527399fd6414f5c".some)
       assertEquals(logged, Vector.empty)
     }
@@ -170,7 +213,7 @@ class EcsResourceSuite extends CatsEffectSuite {
   test("a malformed ECS_CONTAINER_METADATA_URI_V4 gives the empty resource without calling the client") {
     val malformed = "http://[invalid"
     assert(Uri.fromString(malformed).isLeft)
-    withLogs(implicit lf => EcsResource.detect(unreachable)(implicitly, envWith(Map("ECS_CONTAINER_METADATA_URI_V4" -> malformed)), lf)).map { case (resource, logged) =>
+    withLogs(lf => EcsResource.detect(unreachable)(implicitly, envWith(Map("ECS_CONTAINER_METADATA_URI_V4" -> malformed)), lf)).map { case (resource, logged) =>
       assertEquals(resource, OTResource.empty())
       assertEquals(logged, Vector.empty)
     }

@@ -114,6 +114,7 @@ libraryDependencies += "com.dwolla" %% "dwolla-otel4s-oteljava-aws-ecs" % "<vers
 ```scala
 import com.dwolla.otel4s.oteljava.awsecs._
 
+// requires an implicit LoggerFactory[IO], such as log4cats-slf4j's Slf4jFactory.create[IO]
 OtelJavaAtDwolla[IO]("foo-service", BuildInfo.version, env)
   .withTracing
   .withEcsResource(httpClient)

@@ -189,7 +189,7 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite {
   private def spanAndMetricResources(builder: OtelAtDwollaBuilder[IO, OtelJavaBackend[IO], Any with Signal.Tracing with Signal.Metrics],
                                      telemetry: InMemoryTelemetry): IO[(OTResource, OTResource)] =
     builder.build.use { case (tracerProvider, meterProvider) =>
-      tracerProvider.get("test").flatMap(_.span("signal-resource-span").use_) >>
+      tracerProvider.get("test").flatMap(_.span("resource-span").use_) >>
         meterProvider.get("test").flatMap(_.counter[Long]("test.calls").create.flatMap(_.inc())) >>
         IO {
           val span = telemetry.spans.getFinishedSpanItems.asScala.head
