@@ -2,7 +2,7 @@ package com.dwolla.tracing
 
 import cats.effect.std.*
 import cats.effect.syntax.all.*
-import cats.effect.{Trace as _, *}
+import cats.effect.*
 import cats.syntax.all.*
 import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.common.Attributes
