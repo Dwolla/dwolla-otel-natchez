@@ -18,7 +18,7 @@ import java.util.UUID
 
 import scala.jdk.CollectionConverters.*
 
-class OtelJavaAtDwollaSuite extends CatsEffectSuite {
+class OtelJavaAtDwollaSuite extends CatsEffectSuite with NoInheritedOtelEnvironment {
   private def withRandom[A](f: Random[IO] => IO[A]): IO[A] =
     Random.scalaUtilRandomSeedLong[IO](20261002L).flatMap(f)
 
@@ -179,6 +179,26 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite {
       )
         .map { spans =>
           assertEquals(Option(spans.head.getResource.getAttribute(stringKey("service.instance.id"))), None)
+        }
+    }
+  }
+
+  test("OTEL_RESOURCE_DISABLED_KEYS removes Dwolla's service.version and deployment.environment.name") {
+    withRandom { implicit random =>
+      val telemetry = InMemoryTelemetry()
+      finishedSpans(
+        telemetry,
+        telemetry.attachTo(
+          OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.DevInt).withTracing,
+          overrides = Map("otel.resource.disabled.keys" -> "service.version,deployment.environment.name"),
+        ).build,
+        "disabled-dwolla-attributes-span",
+      )
+        .map { spans =>
+          val resource = spans.head.getResource
+          assertEquals(Option(resource.getAttribute(stringKey("service.version"))), None)
+          assertEquals(Option(resource.getAttribute(stringKey("deployment.environment.name"))), None)
+          assertEquals(resource.getAttribute(stringKey("service.name")), "foo-service")
         }
     }
   }

@@ -13,7 +13,7 @@ object LibrarySyntax {
   def meterProviderInScope[F[_]](implicit mp: MeterProvider[F]): MeterProvider[F] = mp
 }
 
-class CallSiteSuite extends CatsEffectSuite {
+class CallSiteSuite extends CatsEffectSuite with NoInheritedOtelEnvironment {
   private def builder(implicit random: Random[IO]) =
     InMemoryTelemetry().attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local))
 

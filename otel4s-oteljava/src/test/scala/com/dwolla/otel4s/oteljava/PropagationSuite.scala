@@ -18,7 +18,7 @@ private final case class Propagated(sent: SpanContext, headers: Map[String, Stri
  * Linkage guard: the X-Ray propagator is an -alpha artifact built against an older OpenTelemetry than otelV,
  * so calling it here turns a NoClassDefFoundError or NoSuchMethodError into a build failure.
  */
-class PropagationSuite extends CatsEffectSuite {
+class PropagationSuite extends CatsEffectSuite with NoInheritedOtelEnvironment {
   private val setter: TextMapSetter[ju.Map[String, String]] =
     (carrier: ju.Map[String, String], key: String, value: String) => { carrier.put(key, value); () }
 
