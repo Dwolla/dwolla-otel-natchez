@@ -52,10 +52,10 @@ class EcsBuilderSuite extends CatsEffectSuite {
 
   private val taskId = "158d1c8083dd49d6b527399fd6414f5c"
 
-  test("withEcsResource puts the ECS attributes on spans only") {
+  test("withEcsTelemetryResourceOnTraces puts the ECS attributes on spans only") {
     withRandom { implicit random =>
       resources(t => t.attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics)
-        .withEcsResource(metadataServer).build, InMemoryTelemetry())
+        .withEcsTelemetryResourceOnTraces(metadataServer).build, InMemoryTelemetry())
         .map { case (spanResource, metricResource) =>
           assertEquals(spanResource.getAttribute(stringKey("aws.ecs.task.id")), taskId)
           assertEquals(metricResource.getAttribute(stringKey("aws.ecs.task.id")), null)
@@ -63,10 +63,10 @@ class EcsBuilderSuite extends CatsEffectSuite {
     }
   }
 
-  test("withEcsResourceOnMetrics puts the ECS attributes on metrics") {
+  test("withEcsTelemetryResourceOnMetrics puts the ECS attributes on metrics") {
     withRandom { implicit random =>
       resources(t => t.attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics)
-        .withEcsResourceOnMetrics(metadataServer).build, InMemoryTelemetry())
+        .withEcsTelemetryResourceOnMetrics(metadataServer).build, InMemoryTelemetry())
         .map { case (spanResource, metricResource) =>
           assertEquals(spanResource.getAttribute(stringKey("aws.ecs.task.id")), null)
           assertEquals(metricResource.getAttribute(stringKey("aws.ecs.task.id")), taskId)
@@ -77,7 +77,9 @@ class EcsBuilderSuite extends CatsEffectSuite {
   test("both opt-ins put the ECS attributes on spans and metrics") {
     withRandom { implicit random =>
       resources(t => t.attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics)
-        .withEcsResource(metadataServer).withEcsResourceOnMetrics(metadataServer).build, InMemoryTelemetry())
+        .withEcsTelemetryResourceOnTraces(metadataServer)
+        .withEcsTelemetryResourceOnMetrics(metadataServer)
+        .build, InMemoryTelemetry())
         .map { case (spanResource, metricResource) =>
           assertEquals(spanResource.getAttribute(stringKey("aws.ecs.task.id")), taskId)
           assertEquals(metricResource.getAttribute(stringKey("aws.ecs.task.id")), taskId)

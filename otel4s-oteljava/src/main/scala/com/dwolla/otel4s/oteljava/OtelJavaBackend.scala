@@ -137,14 +137,19 @@ object OtelJavaBackend {
      * service name (from `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES`, or the builder). Otherwise they override
      * Dwolla's and other detected resource attributes, except keys in `otel.resource.attributes` or removed by
      * `otel.resource.disabled.keys`. Each call's `detect`
-     * runs separately, even when given the same effect. If `detect` fails, `build` fails; handle errors in
-     * `detect` to make detection optional.
+     * runs separately, even when given the same effect. `detect` yields an OpenTelemetry resource
+     * (`io.opentelemetry.sdk.resources.Resource`), not a cats-effect `Resource`. If `detect` fails, `build` fails;
+     * handle errors in `detect` to make detection optional.
      */
-    def withResourceOnTraces(detect: F[OTResource])(implicit @unused ev: E <:< Signal.Tracing): OtelAtDwollaBuilder[F, OtelJavaBackend[F], E] =
+    def withTelemetryResourceOnTraces(detect: F[OTResource])(implicit @unused ev: E <:< Signal.Tracing): OtelAtDwollaBuilder[F, OtelJavaBackend[F], E] =
       builder.mapBackend(b => b.copy(signalResources = b.signalResources :+ new SignalResource[F](detect, onTraces = true, onMetrics = false)))
 
-    /** As [[withResourceOnTraces]], for metrics. Every resource attribute is sent with every metric data point. */
-    def withResourceOnMetrics(detect: F[OTResource])(implicit @unused ev: E <:< Signal.Metrics): OtelAtDwollaBuilder[F, OtelJavaBackend[F], E] =
+    /**
+     * As [[withTelemetryResourceOnTraces]], for metrics. Every resource attribute is sent with every metric data
+     * point. `detect` yields an OpenTelemetry resource (`io.opentelemetry.sdk.resources.Resource`), not a cats-effect
+     * `Resource`.
+     */
+    def withTelemetryResourceOnMetrics(detect: F[OTResource])(implicit @unused ev: E <:< Signal.Metrics): OtelAtDwollaBuilder[F, OtelJavaBackend[F], E] =
       builder.mapBackend(b => b.copy(signalResources = b.signalResources :+ new SignalResource[F](detect, onTraces = false, onMetrics = true)))
   }
 }

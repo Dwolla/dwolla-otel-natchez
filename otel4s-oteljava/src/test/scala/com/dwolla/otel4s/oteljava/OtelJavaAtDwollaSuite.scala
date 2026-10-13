@@ -223,7 +223,7 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite with NoInheritedOtelEnvironm
       val telemetry = InMemoryTelemetry()
       val builder = OtelJavaBackend.OtelJavaBuilderOps(
         telemetry.attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics)
-      ).withResourceOnTraces(detected.pure[IO])
+      ).withTelemetryResourceOnTraces(detected.pure[IO])
       spanAndMetricResources(builder, telemetry).map { case (spanResource, metricResource) =>
         assertEquals(spanResource.getAttribute(stringKey("aws.ecs.task.id")), "detected-task")
         assertEquals(metricResource.getAttribute(stringKey("aws.ecs.task.id")), null)
@@ -236,7 +236,7 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite with NoInheritedOtelEnvironm
       val telemetry = InMemoryTelemetry()
       val builder = OtelJavaBackend.OtelJavaBuilderOps(
         telemetry.attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics)
-      ).withResourceOnMetrics(detected.pure[IO])
+      ).withTelemetryResourceOnMetrics(detected.pure[IO])
       spanAndMetricResources(builder, telemetry).map { case (spanResource, metricResource) =>
         assertEquals(spanResource.getAttribute(stringKey("aws.ecs.task.id")), null)
         assertEquals(metricResource.getAttribute(stringKey("aws.ecs.task.id")), "detected-task")
@@ -255,7 +255,7 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite with NoInheritedOtelEnvironm
             "otel.resource.disabled.keys" -> "aws.ecs.task.id",
           ),
         )
-      ).withResourceOnTraces(detected.pure[IO])
+      ).withTelemetryResourceOnTraces(detected.pure[IO])
       spanAndMetricResources(builder, telemetry).map { case (spanResource, _) =>
         assertEquals(spanResource.getAttribute(stringKey("cloud.region")), "configured-region")
         assertEquals(spanResource.getAttribute(stringKey("aws.ecs.task.id")), null)
@@ -274,7 +274,7 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite with NoInheritedOtelEnvironm
             "otel.resource.disabled.keys" -> "aws.ecs.task.id",
           ),
         )
-      ).withResourceOnMetrics(detected.pure[IO])
+      ).withTelemetryResourceOnMetrics(detected.pure[IO])
       spanAndMetricResources(builder, telemetry).map { case (_, metricResource) =>
         assertEquals(metricResource.getAttribute(stringKey("cloud.region")), "configured-region")
         assertEquals(metricResource.getAttribute(stringKey("aws.ecs.task.id")), null)
@@ -291,8 +291,8 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite with NoInheritedOtelEnvironm
       val builder = OtelJavaBackend.OtelJavaBuilderOps(
         OtelJavaBackend.OtelJavaBuilderOps(
           telemetry.attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics)
-        ).withResourceOnTraces(detectedWithServiceName.pure[IO])
-      ).withResourceOnMetrics(detectedWithServiceName.pure[IO])
+        ).withTelemetryResourceOnTraces(detectedWithServiceName.pure[IO])
+      ).withTelemetryResourceOnMetrics(detectedWithServiceName.pure[IO])
       spanAndMetricResources(builder, telemetry).map { case (spanResource, metricResource) =>
         assertEquals(spanResource.getAttribute(stringKey("service.name")), "foo-service")
         assertEquals(metricResource.getAttribute(stringKey("service.name")), "foo-service")
@@ -311,8 +311,8 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite with NoInheritedOtelEnvironm
             OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics,
             overrides = Map("otel.service.name" -> "configured-service"),
           )
-        ).withResourceOnTraces(detectedWithServiceName.pure[IO])
-      ).withResourceOnMetrics(detectedWithServiceName.pure[IO])
+        ).withTelemetryResourceOnTraces(detectedWithServiceName.pure[IO])
+      ).withTelemetryResourceOnMetrics(detectedWithServiceName.pure[IO])
       spanAndMetricResources(builder, telemetry).map { case (spanResource, metricResource) =>
         assertEquals(spanResource.getAttribute(stringKey("service.name")), "configured-service")
         assertEquals(metricResource.getAttribute(stringKey("service.name")), "configured-service")
@@ -326,7 +326,7 @@ class OtelJavaAtDwollaSuite extends CatsEffectSuite with NoInheritedOtelEnvironm
       val telemetry = InMemoryTelemetry()
       val builder = OtelJavaBackend.OtelJavaBuilderOps(
         telemetry.attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics)
-      ).withResourceOnTraces(IO.raiseError[OTResource](new RuntimeException("boom")))
+      ).withTelemetryResourceOnTraces(IO.raiseError[OTResource](new RuntimeException("boom")))
       builder.build.use_.attempt.map {
         case Left(e) => assertEquals(e.getMessage, "boom")
         case Right(_) => fail("expected build to fail")
