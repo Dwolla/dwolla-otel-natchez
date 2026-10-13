@@ -177,6 +177,36 @@ lazy val natchez = crossProject(JVMPlatform)
       ProblemFilters.exclude[MissingClassProblem]("com.dwolla.tracing.DwollaEnvironment*"),
       ProblemFilters.exclude[MissingClassProblem]("com.dwolla.tracing.LoggingSpanExporter*"),
     ),
+    Test / fork := true,
+    // OpenTelemetryAtDwollaEnvironmentSuite and OpenTelemetryAtDwollaBatchSpanProcessorSuite need real OTEL_*
+    // environment variables, which a running JVM can't set, so each gets its own forked JVM; everything else shares one.
+    Test / testGrouping := {
+      val environmentSuiteName = "com.dwolla.tracing.OpenTelemetryAtDwollaEnvironmentSuite"
+      val batchSpanProcessorSuiteName = "com.dwolla.tracing.OpenTelemetryAtDwollaBatchSpanProcessorSuite"
+      val allTests = (Test / definedTests).value
+      val baseForkOptions = (Test / forkOptions).value
+      def environmentGroup(name: String, suiteName: String, env: Map[String, String]): Tests.Group =
+        Tests.Group(
+          name,
+          allTests.filter(_.name == suiteName),
+          Tests.SubProcess(baseForkOptions.withEnvVars(baseForkOptions.envVars ++ env)),
+        )
+      Seq(
+        Tests.Group(
+          "default",
+          allTests.filterNot(t => Set(environmentSuiteName, batchSpanProcessorSuiteName).contains(t.name)),
+          Tests.SubProcess(baseForkOptions),
+        ),
+        environmentGroup("environment", environmentSuiteName, Map(
+          "OTEL_TRACES_SAMPLER" -> "always_off",
+          "OTEL_BSP_MAX_QUEUE_SIZE" -> "4096",
+        )),
+        environmentGroup("batch-span-processor", batchSpanProcessorSuiteName, Map(
+          "OTEL_TRACES_EXPORTER" -> "dwolla-test-recording",
+          "OTEL_BSP_MAX_EXPORT_BATCH_SIZE" -> "1",
+        )),
+      ).filter(_.tests.nonEmpty)
+    },
     libraryDependencies ++= {
       Seq(
         "org.tpolecat" %%% "natchez-core" % "0.3.10",
@@ -194,10 +224,15 @@ lazy val natchez = crossProject(JVMPlatform)
         "io.opentelemetry" % "opentelemetry-sdk" % otelV,
         "io.opentelemetry" % "opentelemetry-sdk-common" % otelV,
         "io.opentelemetry" % "opentelemetry-sdk-trace" % otelV,
+        "io.opentelemetry" % "opentelemetry-sdk-extension-autoconfigure" % otelV,
+        "io.opentelemetry" % "opentelemetry-sdk-extension-autoconfigure-spi" % otelV,
         "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % s"$otelContribV-alpha",
+        "io.opentelemetry" % "opentelemetry-sdk-testing" % otelV % Test,
         "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.44.0" % Test,
         "io.opentelemetry.semconv" % "opentelemetry-semconv-incubating" % "1.37.0-alpha" % Test,
         "org.scalameta" %%% "munit" % "1.3.6" % Test,
+        "org.typelevel" %%% "munit-cats-effect" % "2.2.1" % Test,
+        "org.typelevel" %%% "log4cats-testing" % "2.8.0" % Test,
       )
     },
   )
@@ -411,7 +446,7 @@ lazy val otel4sOteljavaEndToEnd = crossProject(JVMPlatform)
       else Seq.empty
     },
   )
-  .dependsOn(otel4sOteljava)
+  .dependsOn(otel4sOteljava, natchez)
 
 ThisBuild / githubWorkflowBuild ++= Seq(
   WorkflowStep.Sbt(

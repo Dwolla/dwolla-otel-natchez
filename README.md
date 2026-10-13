@@ -22,6 +22,34 @@ object MyApp extends IOApp {
 }
 ```
 
+### Configuration with `OTEL_*`
+
+The SDK is built with OpenTelemetry's [autoconfigure](https://opentelemetry.io/docs/languages/java/configuration/), so
+the standard `OTEL_*` environment variables and `otel.*` system properties configure it: sampler, batch span processor,
+exporter endpoint, and so on. With none set, the defaults are unchanged: OTLP over gRPC with gzip, a batch size of 128,
+W3C, B3 multi-header, and X-Ray propagation, the `service.name`, `deployment.environment.name` (`Production` for
+`Prod`), and `service.version` (when given) resource attributes, and X-Ray-compatible trace IDs (except through the
+deprecated `Sync`-only `apply`). Autoconfigure also adds a per-JVM `service.instance.id` resource attribute
+(OpenTelemetry Java 1.67.0 and later).
+
+```
+# record about 2% of root traces; children follow their parent's decision
+OTEL_TRACES_SAMPLER=parentbased_traceidratio
+OTEL_TRACES_SAMPLER_ARG=0.02
+
+# batch span processor tuning
+OTEL_BSP_MAX_QUEUE_SIZE=4096
+```
+
+- An application can ship its own sampler as a `ConfigurableSamplerProvider` (registered through the Java `ServiceLoader`
+  SPI) and select it with `OTEL_TRACES_SAMPLER=<name>`.
+- `OTEL_SERVICE_NAME`, or `service.name` in `OTEL_RESOURCE_ATTRIBUTES`, overrides the service name passed in code, as in
+  the [otel4s](#otel4s) module.
+- This module exports traces only. The metrics and logs exporters are always `none`, even if `OTEL_METRICS_EXPORTER` or
+  `OTEL_LOGS_EXPORTER` is set, so it can run alongside `dwolla-otel4s-oteljava` (which handles metrics) in one JVM
+  without exporting duplicate metrics.
+- The SDK flushes pending spans and shuts down when the `EntryPoint` `Resource` is released.
+
 ## otel4s
 
 `dwolla-otel4s-oteljava` configures [otel4s](https://typelevel.org/otel4s/) on the OpenTelemetry Java SDK with the
