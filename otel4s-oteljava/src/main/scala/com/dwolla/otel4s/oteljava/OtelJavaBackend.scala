@@ -54,9 +54,15 @@ final class OtelJavaBackend[F[_] : Async : LocalContextProvider : Random] privat
             config.getMap("otel.resource.attributes").asScala.toMap,
           ).asJava
         }
-        .addResourceCustomizer { (configured: OTResource, _: ConfigProperties) =>
-          // configured attributes win: Dwolla's only fill in keys that are missing
-          dwollaResource(settings).merge(configured)
+        .addResourceCustomizer { (configured: OTResource, config: ConfigProperties) =>
+          // configured attributes win: Dwolla's only fill in keys that are missing. Autoconfigure removes
+          // otel.resource.disabled.keys before customizers run, so Dwolla's must drop them too, or the merge restores them.
+          val disabledKeys = config.getList("otel.resource.disabled.keys").asScala.toSet
+          dwollaResource(settings)
+            .toBuilder
+            .removeIf(key => disabledKeys.contains(key.getKey))
+            .build()
+            .merge(configured)
         }
         .addTracerProviderCustomizer { (tracerProvider: SdkTracerProviderBuilder, config: ConfigProperties) =>
           detected.collect { case (r, resource) if r.onTraces => resource }

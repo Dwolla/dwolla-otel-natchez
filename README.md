@@ -113,8 +113,8 @@ With one signal, `.use { implicit meterProvider => ... }` works on either versio
 
 Every default is an overridable property: any `OTEL_*` environment variable or `otel.*` system property wins.
 `OTEL_SERVICE_NAME` and a `service.name` in `OTEL_RESOURCE_ATTRIBUTES` both override the service name given to the
-builder. `OTEL_RESOURCE_DISABLED_KEYS` can't remove `service.version` or `deployment.environment.name`, which Dwolla always
-merges into the resource, but it does remove the SDK's `service.instance.id`.
+builder. `OTEL_RESOURCE_DISABLED_KEYS` removes any resource attribute, including Dwolla's `service.version` and
+`deployment.environment.name` and the SDK's `service.instance.id`.
 
 Options:
 
