@@ -7,7 +7,7 @@ import munit.CatsEffectSuite
 import org.typelevel.otel4s.metrics.MeterProvider
 import org.typelevel.otel4s.trace.TracerProvider
 
-class Scala213CallSiteSuite extends CatsEffectSuite {
+class Scala213CallSiteSuite extends CatsEffectSuite with NoInheritedOtelEnvironment {
   test("both, Scala 2.13 with better-monadic-for: `implicit0` in a for-comprehension, no import") {
     val program = for {
       implicit0(random: Random[IO]) <- Random.scalaUtilRandomSeedLong[IO](20261002L).toResource

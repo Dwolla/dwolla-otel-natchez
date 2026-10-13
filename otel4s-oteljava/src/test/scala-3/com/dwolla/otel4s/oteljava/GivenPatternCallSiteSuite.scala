@@ -7,7 +7,7 @@ import munit.CatsEffectSuite
 import org.typelevel.otel4s.metrics.MeterProvider
 import org.typelevel.otel4s.trace.TracerProvider
 
-class GivenPatternCallSiteSuite extends CatsEffectSuite {
+class GivenPatternCallSiteSuite extends CatsEffectSuite with NoInheritedOtelEnvironment {
   test("both, Scala 3: `case (given TracerProvider[IO], given MeterProvider[IO]) =>`, no import") {
     Random.scalaUtilRandomSeedLong[IO](20261002L).flatMap { implicit random =>
       InMemoryTelemetry().attachTo(OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local).withTracing.withMetrics)

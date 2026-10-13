@@ -18,7 +18,7 @@ import java.util.UUID
 
 import scala.jdk.CollectionConverters.*
 
-class OtelJavaAtDwollaSuite extends CatsEffectSuite {
+class OtelJavaAtDwollaSuite extends CatsEffectSuite with NoInheritedOtelEnvironment {
   private def withRandom[A](f: Random[IO] => IO[A]): IO[A] =
     Random.scalaUtilRandomSeedLong[IO](20261002L).flatMap(f)
 

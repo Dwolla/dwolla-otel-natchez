@@ -10,7 +10,7 @@ import org.typelevel.log4cats.testing.TestingLoggerFactory
 
 import scala.jdk.CollectionConverters.*
 
-class OtelJavaBuilderOptionsSuite extends CatsEffectSuite {
+class OtelJavaBuilderOptionsSuite extends CatsEffectSuite with NoInheritedOtelEnvironment {
   private def withRandom[A](f: Random[IO] => IO[A]): IO[A] =
     Random.scalaUtilRandomSeedLong[IO](20261002L).flatMap(f)
 
