@@ -145,12 +145,13 @@ import com.dwolla.otel4s.oteljava.awsecs._
 // requires an implicit LoggerFactory[IO], such as log4cats-slf4j's Slf4jFactory.create[IO]
 OtelJavaAtDwolla[IO]("foo-service", BuildInfo.version, env)
   .withTracing
-  .withEcsResource(httpClient)
+  .withEcsTelemetryResourceOnTraces(httpClient)
   .build
 ```
 
-`withEcsResource` adds the attributes to spans only. `.withEcsResourceOnMetrics(httpClient)` adds them to
-metrics; to get both, call both. Both need an implicit log4cats `LoggerFactory[F]` (and an `Env[F]`) in scope.
+`withEcsTelemetryResourceOnTraces` adds the attributes to spans only.
+`.withEcsTelemetryResourceOnMetrics(httpClient)` adds them to metrics; to get both, call both. Both need an implicit
+log4cats `LoggerFactory[F]` (and an `Env[F]`) in scope.
 
 Detection never fails startup. Outside ECS (`ECS_CONTAINER_METADATA_URI_V4` unset or malformed) it adds nothing and
 logs nothing. Inside ECS, an HTTP error, an undecodable response, or a response that takes more than 2 seconds adds
@@ -161,7 +162,7 @@ Detected attributes never replace the service name. Otherwise they override Dwol
 `OTEL_RESOURCE_ATTRIBUTES`, and `OTEL_RESOURCE_DISABLED_KEYS` removes them.
 
 Every resource attribute is sent with every metric data point. With CloudWatch metrics, which bill OTLP ingestion by
-the byte, `withEcsResourceOnMetrics` adds cost for little value, since `service.instance.id` already keeps each
+the byte, `withEcsTelemetryResourceOnMetrics` adds cost for little value, since `service.instance.id` already keeps each
 instance's series apart.
 
 ### Keep OpenTelemetry Java on one version
