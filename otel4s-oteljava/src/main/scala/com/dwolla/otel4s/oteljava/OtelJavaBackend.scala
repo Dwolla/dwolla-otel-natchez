@@ -11,7 +11,7 @@ import io.opentelemetry.api.common.AttributeKey.stringKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdkBuilder
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties
-import io.opentelemetry.sdk.metrics.SdkMeterProviderBuilder
+import io.opentelemetry.sdk.metrics.{InstrumentSelector, SdkMeterProviderBuilder, View}
 import io.opentelemetry.sdk.resources.Resource as OTResource
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder
 import io.opentelemetry.sdk.trace.`export`.SimpleSpanProcessor
@@ -151,5 +151,29 @@ object OtelJavaBackend {
      */
     def withTelemetryResourceOnMetrics(detect: F[OTResource])(implicit @unused ev: E <:< Signal.Metrics): OtelAtDwollaBuilder[F, OtelJavaBackend[F], E] =
       builder.mapBackend(b => b.copy(signalResources = b.signalResources :+ new SignalResource[F](detect, onTraces = false, onMetrics = true)))
+
+    /**
+     * Register an OpenTelemetry SDK `View`: it changes how the instruments matched by `selector` are aggregated and
+     * exported (their bucket boundaries, name, or attributes). A View's explicit aggregation overrides the bucket
+     * boundaries an instrument's creator advised. A View that selects an instrument also replaces its advised attribute
+     * keys: all recorded attributes are kept unless the View sets `setAttributeFilter`. Requires `withMetrics`. Each
+     * matching View produces its own metric stream, so two Views that select the same instrument without renaming it
+     * conflict.
+     *
+     * {{{
+     * builder.withView(
+     *   InstrumentSelector.builder().setName("rpc.server.call.duration").build(),
+     *   View.builder()
+     *     .setAggregation(Aggregation.explicitBucketHistogram(
+     *       ExplicitBucketHistogramOptions.builder().setBucketBoundaries(List(0.005, 0.0075, 0.01).map(Double.box).asJava).build()
+     *     ))
+     *     .build(),
+     * )
+     * }}}
+     */
+    def withView(selector: InstrumentSelector, view: View)(implicit @unused ev: E <:< Signal.Metrics): OtelAtDwollaBuilder[F, OtelJavaBackend[F], E] =
+      withAutoConfigureCustomizer {
+        _.addMeterProviderCustomizer((meterProvider: SdkMeterProviderBuilder, _: ConfigProperties) => meterProvider.registerView(selector, view))
+      }
   }
 }

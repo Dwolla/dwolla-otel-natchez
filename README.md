@@ -126,6 +126,10 @@ Options:
   registered one, or if anything already called `GlobalOpenTelemetry.get()` (OpenTelemetry Java 1.66 installs a
   no-op on the first call).
 - `.withStartupHook(otel => resource)`: run something against the started SDK.
+- `.withView(selector, view)` (requires `withMetrics`): register an OpenTelemetry SDK `View`, for example to give a
+  histogram finer bucket boundaries than the ones its instrumentation advises. A View's explicit aggregation overrides
+  the advised boundaries, and a View that selects an instrument also replaces its advised attribute keys: all recorded
+  attributes are kept unless the View sets `setAttributeFilter`.
 - `.withRuntimeMetrics` (requires `withMetrics`; add `dwolla-otel4s-oteljava-runtime-metrics` and
   `import com.dwolla.otel4s.oteljava.runtimemetrics._`): JVM runtime metrics.
 

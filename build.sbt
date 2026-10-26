@@ -367,6 +367,8 @@ lazy val otel4sOteljava = crossProject(JVMPlatform)
           "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % otelV,
           "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % s"$otelContribV-alpha",
           "io.opentelemetry" % "opentelemetry-sdk-testing" % otelV % Test,
+          // otel4s can't advise attribute keys, so a test creates that histogram through the Java API
+          "io.opentelemetry" % "opentelemetry-api-incubator" % s"$otelV-alpha" % Test,
           "org.scalameta" %%% "munit" % "1.3.6" % Test,
           "org.typelevel" %%% "munit-cats-effect" % "2.2.1" % Test,
           "org.typelevel" %%% "log4cats-testing" % "2.8.0" % Test,
