@@ -47,7 +47,7 @@ lazy val otelV = "1.67.0"
 lazy val otelInstrumentationV = "2.31.1"
 // io.opentelemetry.contrib, used as "1.52.0-alpha" (built against OTel 1.56.0).
 lazy val otelContribV = "1.52.0"
-lazy val otel4sV = "1.1.0"
+lazy val otel4sV = "1.2.0"
 
 lazy val otelBaseVersions: Map[String, String] = Map(
   "io.opentelemetry" -> otelV,
