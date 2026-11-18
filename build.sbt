@@ -416,10 +416,10 @@ lazy val otel4sOteljavaAwsEcs = crossProject(JVMPlatform)
     libraryDependencies ++= {
       if (isOtel4sScalaVersion.value)
         Seq(
-          "org.http4s" %%% "http4s-client" % "0.23.38",
-          "org.http4s" %%% "http4s-circe" % "0.23.38",
+          "org.http4s" %%% "http4s-client" % "0.23.39",
+          "org.http4s" %%% "http4s-circe" % "0.23.39",
           "io.opentelemetry" % "opentelemetry-sdk-testing" % otelV % Test,
-          "org.http4s" %%% "http4s-dsl" % "0.23.38" % Test,
+          "org.http4s" %%% "http4s-dsl" % "0.23.39" % Test,
           "org.scalameta" %%% "munit" % "1.3.6" % Test,
           "org.typelevel" %%% "munit-cats-effect" % "2.2.1" % Test,
           "org.typelevel" %%% "cats-effect-testkit" % catsEffectV % Test,
