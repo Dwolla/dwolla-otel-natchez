@@ -125,7 +125,7 @@ lazy val core = crossProject(JVMPlatform)
       // the semconv artifacts' AttributeKey constants need opentelemetry-api on the test classpath, and
       // semconv's POM declares no dependencies
       "io.opentelemetry" % "opentelemetry-api" % otelV % Test,
-      "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.44.0" % Test,
+      "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.45.0" % Test,
       "io.opentelemetry.semconv" % "opentelemetry-semconv-incubating" % "1.37.0-alpha" % Test,
       "org.scalameta" %%% "munit" % "1.3.6" % Test,
     ),
@@ -228,7 +228,7 @@ lazy val natchez = crossProject(JVMPlatform)
         "io.opentelemetry" % "opentelemetry-sdk-extension-autoconfigure-spi" % otelV,
         "io.opentelemetry.contrib" % "opentelemetry-aws-xray-propagator" % s"$otelContribV-alpha",
         "io.opentelemetry" % "opentelemetry-sdk-testing" % otelV % Test,
-        "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.44.0" % Test,
+        "io.opentelemetry.semconv" % "opentelemetry-semconv" % "1.45.0" % Test,
         "io.opentelemetry.semconv" % "opentelemetry-semconv-incubating" % "1.37.0-alpha" % Test,
         "org.scalameta" %%% "munit" % "1.3.6" % Test,
         "org.typelevel" %%% "munit-cats-effect" % "2.2.1" % Test,
