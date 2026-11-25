@@ -15,8 +15,8 @@ import scala.jdk.CollectionConverters.*
 private final case class Propagated(sent: SpanContext, headers: Map[String, String], roundTripped: SpanContext, fromXRayOnly: SpanContext)
 
 /**
- * Linkage guard: the X-Ray propagator is an -alpha artifact built against an older OpenTelemetry than otelV,
- * so calling it here turns a NoClassDefFoundError or NoSuchMethodError into a build failure.
+ * Linkage guard: the X-Ray propagator is an -alpha artifact built against its own OpenTelemetry release, which can
+ * differ from otelV, so calling it here turns a NoClassDefFoundError or NoSuchMethodError into a build failure.
  */
 class PropagationSuite extends CatsEffectSuite with NoInheritedOtelEnvironment {
   private val setter: TextMapSetter[ju.Map[String, String]] =
@@ -43,13 +43,21 @@ class PropagationSuite extends CatsEffectSuite with NoInheritedOtelEnvironment {
     Propagated(span.getSpanContext, carrier.asScala.toMap, roundTripped, fromXRayOnly)
   }
 
+  // cats-effect treats a LinkageError as fatal: thrown inside IO, it shuts the runtime down and the suite hangs instead of
+  // failing. Catching it here, outside any fiber, keeps this guard a test failure.
+  private def propagateOrFail(otel: OpenTelemetry): Propagated =
+    try propagate(otel)
+    catch {
+      case e: LinkageError => fail(s"the X-Ray propagator doesn't link against this OpenTelemetry release: $e", e)
+    }
+
   test("the default propagators inject W3C, B3 multi-header, and X-Ray headers, and extract X-Ray-only requests") {
     Random.scalaUtilRandomSeedLong[IO](20261002L).flatMap { implicit random =>
       Ref[IO].of(Option.empty[Propagated]).flatMap { result =>
         InMemoryTelemetry().attachTo(
           OtelJavaAtDwolla[IO]("foo-service", "1.2.3", DwollaEnvironment.Local)
             .withTracing
-            .withStartupHook(otel => IO(propagate(otel)).flatMap(p => result.set(Some(p))).toResource)
+            .withStartupHook(otel => IO(propagateOrFail(otel)).flatMap(p => result.set(Some(p))).toResource)
         )
           .build
           .use_ >> result.get

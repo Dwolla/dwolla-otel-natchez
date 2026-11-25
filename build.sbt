@@ -45,8 +45,11 @@ lazy val otelV = "1.67.0"
 // io.opentelemetry.instrumentation, used as both "2.31.1" and "2.31.1-alpha". 2.31.1 is built against
 // OTel 1.65.0; no release built against otelV exists yet.
 lazy val otelInstrumentationV = "2.31.1"
-// io.opentelemetry.contrib, used as "1.52.0-alpha" (built against OTel 1.56.0).
-lazy val otelContribV = "1.52.0"
+// io.opentelemetry.contrib, used with an "-alpha" suffix. Its X-Ray propagator calls opentelemetry-api internals, which
+// checkOtelVersions can't see, so an otelV the propagator wasn't built for can fail only at runtime (NoSuchMethodError).
+// PropagationSuite is the guard: when it fails after an otelV change, move this to the newest release whose pom's
+// opentelemetry-api isn't newer than otelV.
+lazy val otelContribV = "1.62.1"
 lazy val otel4sV = "1.1.0"
 
 lazy val otelBaseVersions: Map[String, String] = Map(
