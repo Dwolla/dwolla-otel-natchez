@@ -15,8 +15,8 @@ import scala.jdk.CollectionConverters.*
 private final case class Propagated(sent: SpanContext, headers: Map[String, String], roundTripped: SpanContext, fromXRayOnly: SpanContext)
 
 /**
- * Linkage guard: the X-Ray propagator is an -alpha artifact built against an older OpenTelemetry than otelV,
- * so calling it here turns a NoClassDefFoundError or NoSuchMethodError into a build failure.
+ * Linkage guard: the X-Ray propagator is an -alpha artifact built against its own OpenTelemetry release, which can
+ * differ from otelV, so calling it here turns a NoClassDefFoundError or NoSuchMethodError into a build failure.
  */
 class PropagationSuite extends CatsEffectSuite with NoInheritedOtelEnvironment {
   private val setter: TextMapSetter[ju.Map[String, String]] =
